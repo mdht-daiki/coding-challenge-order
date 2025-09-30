@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Virtualenv
+venv/
+.venv/
+.env
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VSCode / JetBrains
+.vscode/
+.idea/

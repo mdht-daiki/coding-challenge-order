@@ -1,0 +1,43 @@
+repos:
+  # フォーマッタ（black）
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  # Lint（ruff）
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  # import整列（isort）
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        # black と整合させるなら推奨
+        args: ["--profile", "black", "--filter-files"]
+
+  # 便利系（空白・巨大ファイルなど）
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+
+  # # （任意）ローカルフック：スモークpytest
+  # # ※ tests/test_smoke.py を後で作ったら有効化
+  # - repo: local
+  #   hooks:
+  #     - id: pytest-smoke
+  #       name: pytest (smoke)
+  #       entry: bash -lc 'pytest -q tests/test_smoke.py'
+  #       language: system
+  #       types: [python]
+  #       pass_filenames: false
+  #       stages: [commit] # コミット時に実行
+  #       # ↑ スモークをまだ書いていない間は、このブロックをコメントアウトでもOK
