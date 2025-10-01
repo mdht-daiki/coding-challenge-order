@@ -5,3 +5,6 @@ pre-commit==3.8.0
 fastapi==0.118.0
 uvicorn==0.37.0
 httpx==0.28.1
+pydantic==2.11.9
+email-validator==2.3.0
+pydantic_settings==2.11.0
