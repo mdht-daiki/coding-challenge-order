@@ -15,4 +15,6 @@ def client():
 def reset_storage():
     """各テストの前にインメモリストレージをクリア"""
     services._customers_by_id.clear()
+    if hasattr(services, "_custid_by_email"):
+        services._custid_by_email.clear()
     yield
