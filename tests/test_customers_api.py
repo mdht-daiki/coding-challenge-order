@@ -4,7 +4,7 @@ def test_create_customer_ok(client):
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["custId"].startswith("C_")
+    assert body["cust_id"].startswith("C_")
     assert body["name"] == "Alice"
     assert body["email"] == "a@example.com"
 

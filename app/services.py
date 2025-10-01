@@ -28,7 +28,7 @@ def create_customer(name: str, email: str) -> CustomerWithId:
             raise Conflict("EMAIL_DUP", f"email already exists: {email}")
 
         cust_id = new_cust_id()
-        customer = CustomerWithId(custId=cust_id, name=name, email=email)
+        customer = CustomerWithId(cust_id=cust_id, name=name, email=email)
         _customers_by_id[cust_id] = customer
         _custid_by_email[email] = cust_id
         return customer
