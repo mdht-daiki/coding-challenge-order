@@ -19,3 +19,15 @@ def test_create_customer_duplicate_email(client):
     )
     assert second_response.status_code == 409
     assert second_response.json()["detail"]["code"] == "EMAIL_DUP"
+
+
+def test_create_customer_invalid_email(client):
+    response = client.post(
+        "/customers", json={"name": "Test", "email": "invalid-email"}
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_create_customer_empty_name(client):
+    response = client.post("/customers", json={"name": "", "email": "test@example.com"})
+    assert response.status_code == 422
