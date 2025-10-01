@@ -17,6 +17,10 @@ def new_cust_id() -> str:
 
 
 def create_customer(name: str, email: str) -> CustomerWithId:
+    if email in [v.email for v in _customers_by_id.values()]:
+        from .core.errors import Conflict
+
+        raise Conflict("EMAIL_DUPLICATE", f"email already exists: {email}")
     cust_id = new_cust_id()
     customer = CustomerWithId(custId=cust_id, name=name, email=email)
     _customers_by_id[cust_id] = customer
