@@ -1,6 +1,18 @@
+import pytest
+
+from tests.helpers import post_json
+
+
+@pytest.mark.parametrize("name", [" ", "A" * 101])
+def test_create_customer_name_boundary(client, name):
+    response = post_json(client, "/customers", {"name": name, "email": "b@example.com"})
+    # TODO: 統一エラーフォーマット実装後は400のみを期待
+    assert response.status_code in (400, 422)
+
+
 def test_create_customer_ok(client):
-    response = client.post(
-        "/customers", json={"name": "Alice", "email": "a@example.com"}
+    response = post_json(
+        client, "/customers", {"name": "Alice", "email": "a@example.com"}
     )
     assert response.status_code == 200
     body = response.json()
@@ -10,24 +22,26 @@ def test_create_customer_ok(client):
 
 
 def test_create_customer_duplicate_email(client):
-    first_response = client.post(
-        "/customers", json={"name": "Bob", "email": "duplicate@example.com"}
+    first_response = post_json(
+        client, "/customers", {"name": "Bob", "email": "duplicate@example.com"}
     )
     assert first_response.status_code == 200
-    second_response = client.post(
-        "/customers", json={"name": "Charlie", "email": "duplicate@example.com"}
+    second_response = post_json(
+        client, "/customers", {"name": "Charlie", "email": "duplicate@example.com"}
     )
     assert second_response.status_code == 409
     assert second_response.json()["detail"]["code"] == "EMAIL_DUP"
 
 
 def test_create_customer_invalid_email(client):
-    response = client.post(
-        "/customers", json={"name": "Test", "email": "invalid-email"}
+    response = post_json(
+        client, "/customers", {"name": "Test", "email": "invalid-email"}
     )
     assert response.status_code == 422  # Validation error
 
 
 def test_create_customer_empty_name(client):
-    response = client.post("/customers", json={"name": "", "email": "test@example.com"})
+    response = post_json(
+        client, "/customers", {"name": "", "email": "test@example.com"}
+    )
     assert response.status_code == 422
