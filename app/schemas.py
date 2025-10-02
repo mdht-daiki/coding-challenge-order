@@ -24,4 +24,12 @@ class CustomerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def name_trim_and_noempty(cls, v: str) -> str:
+        v2 = v.strip()
+        if len(v2) == 0:
+            raise ValueError("name must not be blank")
+        return v2
+
     model_config = ConfigDict(alias_generator=to_camel)
