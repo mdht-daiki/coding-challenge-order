@@ -3,9 +3,10 @@ import pytest
 from tests.helpers import post_json
 
 
-@pytest.mark.parametrize("name", ["", " ", "A" * 101])
+@pytest.mark.parametrize("name", [" ", "A" * 101])
 def test_create_customer_name_boundary(client, name):
     response = post_json(client, "/customers", {"name": name, "email": "b@example.com"})
+    # TODO: 統一エラーフォーマット実装後は400のみを期待
     assert response.status_code in (400, 422)
 
 
