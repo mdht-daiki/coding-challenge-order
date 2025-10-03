@@ -4,6 +4,8 @@ import pytest
 
 from tests.helpers import post_json
 
+TEST_API_KEY = "test-secret"
+
 
 @pytest.mark.parametrize("name", [" ", "A" * 101])
 def test_create_customer_name_boundary(client, name):
@@ -11,7 +13,7 @@ def test_create_customer_name_boundary(client, name):
         client,
         "/customers",
         {"name": name, "email": "b@example.com"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert response.status_code == 400
 
@@ -21,7 +23,7 @@ def test_create_customer_ok(client):
         client,
         "/customers",
         {"name": "Alice", "email": "a@example.com"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert response.status_code == 201
     assert "Location" in response.headers
@@ -36,7 +38,7 @@ def test_create_customer_duplicate_email(client):
         client,
         "/customers",
         {"name": "Bob", "email": "duplicate@example.com"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert first_response.status_code == 201
     assert "Location" in first_response.headers
@@ -44,7 +46,7 @@ def test_create_customer_duplicate_email(client):
         client,
         "/customers",
         {"name": "Charlie", "email": "duplicate@example.com"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert second_response.status_code == 409
     assert second_response.json()["detail"]["code"] == "EMAIL_DUP"
@@ -55,7 +57,7 @@ def test_create_customer_invalid_email(client):
         client,
         "/customers",
         {"name": "Test", "email": "invalid-email"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert response.status_code == 400
 
@@ -65,6 +67,6 @@ def test_create_customer_empty_name(client):
         client,
         "/customers",
         {"name": "", "email": "test@example.com"},
-        api_key="test-secret",
+        api_key=TEST_API_KEY,
     )
     assert response.status_code == 400

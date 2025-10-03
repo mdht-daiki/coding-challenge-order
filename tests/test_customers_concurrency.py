@@ -1,13 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 
+from tests.helpers import post_json
+
 
 def test_many_parallel_posts(client):
     def _post(client, i):
-        return client.post(
+        return post_json(
+            client,
             "/customers",
-            json={"name": f"U{i}", "email": f"u{i}@ex.com"},
-            headers={"X-API-KEY": "test-secret"},
+            {"name": f"U{i}", "email": f"u{i}@ex.com"},
+            api_key="test-secret",
         )
 
     with ThreadPoolExecutor(max_workers=16) as ex:

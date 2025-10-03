@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, Response, status
 
-from .core.auth import require_api_key
+from .core.auth import init_api_key, require_api_key
 from .core.exception_handlers import include_handlers
 from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
 from .services import create_customer
@@ -8,6 +8,7 @@ from .services_products import create_product
 
 app = FastAPI()
 include_handlers(app)
+init_api_key()
 
 
 @app.get("/health")
