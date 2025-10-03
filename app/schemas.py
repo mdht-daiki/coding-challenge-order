@@ -37,7 +37,7 @@ class CustomerCreate(BaseModel):
     def name_trim_and_noempty(cls, v: str) -> str:
         return validate_name_trim_and_noempty(v)
 
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 class ProductCreate(BaseModel):
