@@ -23,7 +23,7 @@ def new_prod_id() -> str:
         )
 
 
-def create_product(name: str, unit_price) -> ProductWithId:
+def create_product(name: str, unit_price: int) -> ProductWithId:
     with _lock_p:
         name_lower = name.strip().lower()
         if name_lower in _prodid_by_name:
