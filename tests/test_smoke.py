@@ -11,9 +11,13 @@ def test_health_ok(client):
 
 def test_create_customer_ok(client):
     response = post_json(
-        client, "/customers", {"name": "Alice", "email": "a@example.com"}
+        client,
+        "/customers",
+        {"name": "Alice", "email": "a@example.com"},
+        api_key="test-secret",
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
+    assert "Location" in response.headers
     body = response.json()
     assert re.fullmatch(r"C_[0-9a-f]{8}", body["custId"])
     assert body["name"] == "Alice"
@@ -21,7 +25,9 @@ def test_create_customer_ok(client):
 
 
 def test_create_product_ok(client):
-    response = post_json(client, "/products", {"name": "Pen", "unitPrice": 100})
+    response = post_json(
+        client, "/products", {"name": "Pen", "unitPrice": 100}, api_key="test-secret"
+    )
     assert response.status_code == 201
     assert "Location" in response.headers
     body = response.json()

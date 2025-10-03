@@ -1,16 +1,21 @@
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 
+from tests.helpers import post_json
+
 
 def test_many_parallel_posts(client):
     def _post(client, i):
-        return client.post(
-            "/customers", json={"name": f"U{i}", "email": f"u{i}@ex.com"}
+        return post_json(
+            client,
+            "/customers",
+            {"name": f"U{i}", "email": f"u{i}@ex.com"},
+            api_key="test-secret",
         )
 
     with ThreadPoolExecutor(max_workers=16) as ex:
         results = list(ex.map(_post, repeat(client), range(200)))
-    assert all(r.status_code == 200 for r in results)
+    assert all(r.status_code == 201 for r in results)
 
     # 全てのレスポンスに有効なIDが含まれていることを確認
     ids = [r.json()["custId"] for r in results]

@@ -4,21 +4,29 @@ import pytest
 
 from tests.helpers import post_json
 
+TEST_API_KEY = "test-secret"
+
 
 @pytest.mark.parametrize("name", [" ", "A" * 101])
 def test_create_product_name_boundary(client, name):
-    response = post_json(client, "/products", {"name": name, "unitPrice": 10000})
+    response = post_json(
+        client, "/products", {"name": name, "unitPrice": 10000}, api_key=TEST_API_KEY
+    )
     assert response.status_code == 400
 
 
 @pytest.mark.parametrize("price", [0, 1_000_001])
 def test_create_product_price_boundary(client, price):
-    response = post_json(client, "/products", {"name": "P", "unitPrice": price})
+    response = post_json(
+        client, "/products", {"name": "P", "unitPrice": price}, api_key=TEST_API_KEY
+    )
     assert response.status_code == 400
 
 
 def test_create_product_ok(client):
-    response = post_json(client, "/products", {"name": "Pen", "unitPrice": 100})
+    response = post_json(
+        client, "/products", {"name": "Pen", "unitPrice": 100}, api_key=TEST_API_KEY
+    )
     assert response.status_code == 201
     assert "Location" in response.headers
     body = response.json()
@@ -29,11 +37,17 @@ def test_create_product_ok(client):
 
 def test_create_product_duplicate_name_case_insensitive(client):
     first_response = post_json(
-        client, "/products", {"name": "Notebook", "unitPrice": 500}
+        client,
+        "/products",
+        {"name": "Notebook", "unitPrice": 500},
+        api_key=TEST_API_KEY,
     )
     assert first_response.status_code == 201
     second_response = post_json(
-        client, "/products", {"name": "notebook", "unitPrice": 800}
+        client,
+        "/products",
+        {"name": "notebook", "unitPrice": 800},
+        api_key=TEST_API_KEY,
     )
     assert second_response.status_code == 409
     assert second_response.json()["detail"]["code"] == "NAME_DUP"
