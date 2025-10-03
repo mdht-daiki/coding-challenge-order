@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from tests.helpers import post_json
@@ -6,8 +8,7 @@ from tests.helpers import post_json
 @pytest.mark.parametrize("name", [" ", "A" * 101])
 def test_create_customer_name_boundary(client, name):
     response = post_json(client, "/customers", {"name": name, "email": "b@example.com"})
-    # TODO: 統一エラーフォーマット実装後は400のみを期待
-    assert response.status_code in (400, 422)
+    assert response.status_code == 400
 
 
 def test_create_customer_ok(client):
@@ -16,7 +17,7 @@ def test_create_customer_ok(client):
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["custId"].startswith("C_")
+    assert re.fullmatch(r"C_[0-9a-f]{8}", body["custId"])
     assert body["name"] == "Alice"
     assert body["email"] == "a@example.com"
 
@@ -37,11 +38,11 @@ def test_create_customer_invalid_email(client):
     response = post_json(
         client, "/customers", {"name": "Test", "email": "invalid-email"}
     )
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400
 
 
 def test_create_customer_empty_name(client):
     response = post_json(
         client, "/customers", {"name": "", "email": "test@example.com"}
     )
-    assert response.status_code == 422
+    assert response.status_code == 400
