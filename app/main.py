@@ -16,10 +16,15 @@ async def health_check() -> dict[str, bool]:
 
 
 @app.post(
-    "/customers", response_model=CustomerWithId, dependencies=[Depends(require_api_key)]
+    "/customers",
+    response_model=CustomerWithId,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_api_key)],
 )
-async def post_customer(body: CustomerCreate) -> CustomerWithId:
-    return create_customer(body.name, body.email)
+async def post_customer(body: CustomerCreate, response: Response) -> CustomerWithId:
+    customer = create_customer(body.name, body.email)
+    response.headers["Location"] = f"/customers/{customer.cust_id}"
+    return customer
 
 
 @app.post(

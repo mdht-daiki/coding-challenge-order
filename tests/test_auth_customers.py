@@ -22,6 +22,6 @@ def test_customers_accepts_valid_api_key(client):
         {"name": "A", "email": "a@example.com"},
         api_key="test-secret",
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
     body = r.json()
     assert body["name"] == "A"

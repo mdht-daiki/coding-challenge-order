@@ -16,7 +16,8 @@ def test_create_customer_ok(client):
         {"name": "Alice", "email": "a@example.com"},
         api_key="test-secret",
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
+    assert "Location" in response.headers
     body = response.json()
     assert re.fullmatch(r"C_[0-9a-f]{8}", body["custId"])
     assert body["name"] == "Alice"
