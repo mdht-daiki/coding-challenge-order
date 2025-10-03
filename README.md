@@ -13,6 +13,7 @@ ChatGPT により生成された詳細設計シートに基づき、勝手に仕
 ```bash
 python -m venv venv
 source venv/bin/activate  # Windowsは venv\Scripts\activate
+set API_KEY=test-secret
 pip install -r requirements.txt
 ```
 

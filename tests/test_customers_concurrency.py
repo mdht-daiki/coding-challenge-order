@@ -5,7 +5,9 @@ from itertools import repeat
 def test_many_parallel_posts(client):
     def _post(client, i):
         return client.post(
-            "/customers", json={"name": f"U{i}", "email": f"u{i}@ex.com"}
+            "/customers",
+            json={"name": f"U{i}", "email": f"u{i}@ex.com"},
+            headers={"X-API-KEY": "test-secret"},
         )
 
     with ThreadPoolExecutor(max_workers=16) as ex:

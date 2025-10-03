@@ -11,7 +11,10 @@ def test_health_ok(client):
 
 def test_create_customer_ok(client):
     response = post_json(
-        client, "/customers", {"name": "Alice", "email": "a@example.com"}
+        client,
+        "/customers",
+        {"name": "Alice", "email": "a@example.com"},
+        api_key="test-secret",
     )
     assert response.status_code == 200
     body = response.json()

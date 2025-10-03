@@ -3,6 +3,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def set_api_key_env(monkeypatch):
+    # テスト専用固定キー
+    monkeypatch.setenv("API_KEY", "test-secret")
+    yield
+
+
 @pytest.fixture
 def client():
     from app.main import app  # ← ここでだけ import
