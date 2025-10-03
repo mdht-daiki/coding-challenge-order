@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 
-from .schemas import CustomerCreate, CustomerWithId
+from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
 from .services import create_customer
+from .services_products import create_product
 
 app = FastAPI()
 
@@ -14,3 +15,12 @@ async def health_check() -> dict[str, bool]:
 @app.post("/customers", response_model=CustomerWithId)
 async def post_customer(body: CustomerCreate) -> CustomerWithId:
     return create_customer(body.name, body.email)
+
+
+@app.post(
+    "/products", response_model=ProductWithId, status_code=status.HTTP_201_CREATED
+)
+async def post_product(body: ProductCreate, response: Response) -> ProductWithId:
+    product = create_product(body.name, body.unit_price)
+    response.headers["Location"] = f"/products/{product.prod_id}"
+    return product
