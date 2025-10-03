@@ -19,7 +19,7 @@ def new_prod_id() -> str:
             if prod_id not in _products_by_id:
                 return prod_id
         raise RuntimeError(
-            "Failed to generate unique customer ID after maximum attempts"
+            "Failed to generate unique product ID after maximum attempts"
         )
 
 
