@@ -23,7 +23,10 @@ async def post_customer(body: CustomerCreate) -> CustomerWithId:
 
 
 @app.post(
-    "/products", response_model=ProductWithId, status_code=status.HTTP_201_CREATED
+    "/products",
+    response_model=ProductWithId,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_api_key)],
 )
 async def post_product(body: ProductCreate, response: Response) -> ProductWithId:
     product = create_product(body.name, body.unit_price)

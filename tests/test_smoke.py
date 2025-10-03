@@ -24,7 +24,9 @@ def test_create_customer_ok(client):
 
 
 def test_create_product_ok(client):
-    response = post_json(client, "/products", {"name": "Pen", "unitPrice": 100})
+    response = post_json(
+        client, "/products", {"name": "Pen", "unitPrice": 100}, api_key="test-secret"
+    )
     assert response.status_code == 201
     assert "Location" in response.headers
     body = response.json()
