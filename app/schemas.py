@@ -38,3 +38,28 @@ class CustomerCreate(BaseModel):
         return validate_name_trim_and_noempty(v)
 
     model_config = ConfigDict(alias_generator=to_camel)
+
+
+class ProductCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    unit_price: int = Field(..., ge=1, le=1_000_000)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def name_trim_and_noempty(cls, v: str) -> str:
+        return validate_name_trim_and_noempty(v)
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class ProductWithId(BaseModel):
+    prod_id: str
+    name: str
+    unit_price: int
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, v: str) -> str:
+        return validate_name_trim_and_noempty(v)
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
