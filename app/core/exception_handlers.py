@@ -1,3 +1,5 @@
+import json
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -14,7 +16,7 @@ def include_handlers(app: FastAPI):
             content={
                 "code": "VALIDATION_ERROR",
                 "message": "Invalid request",
-                "details": str(exc),
+                "details": json.loads(json.dumps(exc.errors(), default=str)),
             },
         )
 
@@ -27,6 +29,6 @@ def include_handlers(app: FastAPI):
             content={
                 "code": "VALIDATION_ERROR",
                 "message": "Invalid data",
-                "details": str(exc),
+                "details": json.loads(json.dumps(exc.errors(), default=str)),
             },
         )
