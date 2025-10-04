@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 from starlette.requests import Request as StarletteRequest
 
 from .core.auth import init_api_key, require_api_key
@@ -58,14 +58,14 @@ def get_api_key_for_limit(request: Request) -> str:
     # X-API-KEY ヘッダーからキーを取得
     api_key = request.headers.get("X-API-KEY")
     if not api_key:
-        # Authorization ヘッダーからも実行
+        # Authorization ヘッダーからも取得
         auth_header = request.headers.get("Authorization", "")
         api_key = (
             auth_header.replace("Bearer ", "")
             if auth_header.startswith("Bearer ")
             else auth_header
         )
-    return api_key or "unknown"
+    return api_key if api_key else get_remote_address(request)
 
 
 # Limiterの初期化（default_limitsでグローバル制限を設定）
@@ -106,7 +106,7 @@ async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
         status_code=429,
         content={
             "code": "RATE_LIMIT_EXCEEDED",
-            "message": "リクエスト数が制限を超えました。しばらくしてから再試行してください。",
+            "message": "Rate limit exceeded. Please try again later.",
             "details": details,
         },
         headers=headers,  # レート制限情報をヘッダーにも含める
@@ -118,12 +118,10 @@ include_handlers(app)
 # Limiterをアプリケーションにバインド
 app.state.limiter = limiter
 
-# SlowAPIMiddlewareを追加（これが自動的にレート制限をチェック）
-app.add_middleware(SlowAPIMiddleware)
-
 
 @app.get("/health")
-async def health_check() -> dict[str, bool]:
+@limiter.limit(GLOBAL_RATE_LIMIT)
+async def health_check(request: Request, response: Response) -> dict[str, bool]:
     return {"ok": True}
 
 
