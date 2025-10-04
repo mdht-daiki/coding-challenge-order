@@ -27,8 +27,8 @@ def get_expected_api_key() -> str:
 
 
 async def require_api_key(
+    request: Request,
     x_api_key: str | None = Header(default=None, alias="X-API-KEY"),
-    request: Request = None,
 ):
     """
     認可用の依存関数 + 監査ログ
