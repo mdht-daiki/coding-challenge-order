@@ -34,7 +34,7 @@ FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
 
 def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
-    global _VALID_API_KEYS, _HASH_KEY
+    global _VALID_API_KEYS, _HASH_KEY, _EXPECTED_API_KEY
 
     # 再初期化時に既存のキーをクリア
     _VALID_API_KEYS.clear()
@@ -51,6 +51,12 @@ def init_api_key():
 
     if not _VALID_API_KEYS:
         raise RuntimeError("No API keys configured")
+
+    # 旧APIとの互換用に代表キーを保持（単一キー優先、なければ最初の複数キー）
+    if single_key:
+        _EXPECTED_API_KEY = single_key
+    else:
+        _EXPECTED_API_KEY = next(iter(_VALID_API_KEYS))
 
     hash_secret = os.getenv(HASH_KEY_ENV)
     if not hash_secret:
