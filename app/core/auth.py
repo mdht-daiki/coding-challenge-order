@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import secrets
@@ -37,6 +38,10 @@ async def require_api_key(
     client_ip = request.client.host if request and request.client else "unknown"
     expected = get_expected_api_key()
 
+    # API キーのハッシュ値を識別子として使用
+    def get_key_hash(key: str) -> str:
+        return hashlib.sha256(key.encode()).hexdigest()[:16]  # 最初の16文字
+
     if not x_api_key:
         logger.warning(
             "Authentication failed - missing API key",
@@ -51,6 +56,8 @@ async def require_api_key(
             detail="X-API-KEY header required",
         )
 
+    key_hash = get_key_hash(x_api_key)
+
     if not secrets.compare_digest(x_api_key, expected):
         logger.warning(
             "Authentication failed - invalid API key",
@@ -58,6 +65,7 @@ async def require_api_key(
                 "client_ip": client_ip,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reason": "invalid_key",
+                "key_hash": key_hash,
             },
         )
         raise HTTPException(
@@ -71,5 +79,6 @@ async def require_api_key(
         extra={
             "client_ip": client_ip,
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "key_hash": key_hash,
         },
     )
