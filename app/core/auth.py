@@ -36,21 +36,23 @@ def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
     global _VALID_API_KEYS, _HASH_KEY, _EXPECTED_API_KEY
 
-    # 再初期化時に既存のキーをクリア
-    _VALID_API_KEYS.clear()
+    # 新しいキーセットを構築して置き換える
+    new_keys: Set[str] = set()
 
     # 単一キー(後方互換性)
     single_key = os.getenv(API_KEY_ENV)
     if single_key:
-        _VALID_API_KEYS.add(single_key)
+        new_keys.add(single_key)
 
     # 複数キー対応
     multiple_keys = os.getenv(API_KEYS_ENV)
     if multiple_keys:
-        _VALID_API_KEYS.update(k.strip() for k in multiple_keys.split(",") if k.strip())
+        new_keys.update(k.strip() for k in multiple_keys.split(",") if k.strip())
 
-    if not _VALID_API_KEYS:
+    if not new_keys:
         raise RuntimeError("No API keys configured")
+
+    _VALID_API_KEYS = new_keys
 
     # 旧APIとの互換用に代表キーを保持（単一キー優先、なければ最初の複数キー）
     if single_key:
@@ -154,7 +156,7 @@ async def require_api_key(
     # IPブロックチェック
     if is_ip_blocked(client_ip):
         logger.warning(
-            "Blocked IT attempted access",
+            "Blocked IP attempted access",
             extra={
                 "client_ip": client_ip,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
