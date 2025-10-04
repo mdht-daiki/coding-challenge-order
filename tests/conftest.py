@@ -5,7 +5,11 @@ import logging.config
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import LOGGING_CONFIG
+
+def _get_logging_config():
+    from app.main import LOGGING_CONFIG
+
+    return LOGGING_CONFIG
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +56,7 @@ def audit_log_file(tmp_path, monkeypatch, request):
     log_file = tmp_path / "auth_audit.log"
 
     # 元の設定を保存 (deep copy)
+    LOGGING_CONFIG = _get_logging_config()
     original_config = copy.deepcopy(LOGGING_CONFIG)
 
     # 一時的なログファイルパスに変更
