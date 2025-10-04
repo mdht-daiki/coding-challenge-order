@@ -3,6 +3,7 @@ import logging
 import os
 import secrets
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from argon2.low_level import Type as Argon2Type
 from argon2.low_level import hash_secret_raw
@@ -54,6 +55,7 @@ async def require_api_key(
     expected = get_expected_api_key()
 
     # API キーのハッシュ値を識別子として使用
+    @lru_cache(maxsize=128)
     def get_key_hash(key: str) -> str:
         # Use Argon2id with a constant salt to avoid hash enumeration but keep output stable per key
         raw_hash = hash_secret_raw(
@@ -75,6 +77,7 @@ async def require_api_key(
                 "client_ip": client_ip,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reason": "missing_header",
+                "result": "failure",
             },
         )
         raise HTTPException(
@@ -92,6 +95,7 @@ async def require_api_key(
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reason": "invalid_key",
                 "key_hash": key_hash,
+                "result": "failure",
             },
         )
         raise HTTPException(
@@ -106,5 +110,6 @@ async def require_api_key(
             "client_ip": client_ip,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "key_hash": key_hash,
+            "result": "success",
         },
     )

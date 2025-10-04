@@ -1,9 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 
+import pytest
+
 from tests.helpers import post_json
 
 
+@pytest.mark.timeout(30)
 def test_many_parallel_posts(client):
     def _post(client, i):
         return post_json(
