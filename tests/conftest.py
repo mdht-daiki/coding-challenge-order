@@ -16,6 +16,7 @@ def _get_logging_config():
 def set_api_key_env(monkeypatch):
     # テスト専用固定キー
     monkeypatch.setenv("API_KEY", "test-secret")
+    monkeypatch.setenv("API_KEYS", "test-secret,new-test-key")
     monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
     monkeypatch.setenv("TESTING", "true")
     yield
@@ -90,6 +91,9 @@ def audit_log_file(tmp_path, monkeypatch, request):
 
     print(f"API_KEY in audit_log_file: {os.getenv('API_KEY')}")  # ← デバッグ用
     print(f"TESTING in audit_log_file: {os.getenv('TESTING')}")  # ← デバッグ用
+    print(
+        f"API_KEY_HASH_SECRET in audit_log_file: {os.getenv('API_KEY_HASH_SECRET')}"
+    )  # ← デバッグ用
     log_file = tmp_path / "auth_audit.log"
 
     # 元の設定を保存 (deep copy)

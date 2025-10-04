@@ -6,11 +6,12 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Dict, Tuple
+from typing import Dict, Set, Tuple
 
 from fastapi import Header, HTTPException, Request, status
 
 API_KEY_ENV = "API_KEY"
+API_KEYS_ENV = "API_KEYS"  # カンマ区切りで複数キーをサポート
 HASH_KEY_ENV = "API_KEY_HASH_SECRET"
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 _EXPECTED_API_KEY: str | None = None
 # Secret used for generating HMAC of API keys for logging.
 _HASH_KEY: bytes | None = None
+
+_VALID_API_KEYS: Set[str] = set()
 
 # IPアドレスごとに失敗回数と最終失敗時刻を記録
 # 本番環境ではRedisなどの永続ストレージを使用推奨
@@ -31,10 +34,21 @@ FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
 
 def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
-    global _EXPECTED_API_KEY, _HASH_KEY
-    _EXPECTED_API_KEY = os.getenv(API_KEY_ENV)
-    if not _EXPECTED_API_KEY:
-        raise RuntimeError(f"Environment variable {API_KEY_ENV} is not set")
+    global _VALID_API_KEYS
+
+    # 単一キー(後方互換性)
+    single_key = os.getenv(API_KEY_ENV)
+    if single_key:
+        _VALID_API_KEYS.add(single_key)
+
+    # 複数キー対応
+    multiple_keys = os.getenv(API_KEYS_ENV)
+    if multiple_keys:
+        _VALID_API_KEYS.update(k.strip() for k in multiple_keys.split(",") if k.strip())
+
+    if not _VALID_API_KEYS:
+        raise RuntimeError("No API keys configured")
+
     hash_secret = os.getenv(HASH_KEY_ENV)
     if not hash_secret:
         raise RuntimeError(f"Environment variable {HASH_KEY_ENV} is not set")
@@ -143,8 +157,6 @@ async def require_api_key(
             detail="Too many failed authentication attempts. Please try again later.",
         )
 
-    expected = get_expected_api_key()
-
     if not x_api_key:
         record_failed_attempt(client_ip)
         logger.warning(
@@ -163,7 +175,9 @@ async def require_api_key(
 
     key_hash = _compute_key_hash(x_api_key)
 
-    if not secrets.compare_digest(x_api_key, expected):
+    if not any(
+        secrets.compare_digest(x_api_key, valid_key) for valid_key in _VALID_API_KEYS
+    ):
         record_failed_attempt(client_ip)
         logger.warning(
             "Authentication failed - invalid API key",
