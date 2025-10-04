@@ -41,11 +41,20 @@ async def lifespan(app: FastAPI):
     # シャットダウン処理（必要に応じて追加）
 
 
+def get_api_key_for_limit(request: Request) -> str:
+    """レート制限用にAPIキーを抽出する"""
+    # Authorization ヘッダーまたは X-API-Key ヘッダーからキーを取得
+    api_key = request.headers.get("X-API-KEY") or request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
+    return api_key if api_key else get_remote_address(request)
+
+
 app = FastAPI(lifespan=lifespan)
 
 include_handlers(app)
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_api_key_for_limit)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
