@@ -58,7 +58,6 @@ async def require_api_key(
                 "client_ip": client_ip,
                 "timestamp": datetime.utcnow().isoformat(),
                 "reason": "invalid_key",
-                "key_prefix": x_api_key[:8] if x_api_key else None,
             },
         )
         raise HTTPException(
