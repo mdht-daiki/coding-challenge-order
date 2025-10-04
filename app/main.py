@@ -1,3 +1,6 @@
+import logging.config
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Response, status
 
 from .core.auth import init_api_key, require_api_key
@@ -6,9 +9,38 @@ from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithI
 from .services import create_customer
 from .services_products import create_product
 
-app = FastAPI()
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "auth_audit.log",
+            "formatter": "json",
+        }
+    },
+    "formatters": {
+        "json": {
+            "class": "pythonjsonlogger.json.JsonFormatter",
+            "format": "%(timestamp)s %(levelname)s %(message)s %(client_ip)s %(result)s %(key_hash)s %(reason)s",
+        }
+    },
+    "loggers": {"app.core.auth": {"handlers": ["file"], "level": "INFO"}},
+}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # スタートアップ処理
+    logging.config.dictConfig(LOGGING_CONFIG)
+    init_api_key()
+    yield
+    # シャットダウン処理（必要に応じて追加）
+
+
+app = FastAPI(lifespan=lifespan)
+
 include_handlers(app)
-init_api_key()
 
 
 @app.get("/health")

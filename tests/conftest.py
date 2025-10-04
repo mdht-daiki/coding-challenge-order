@@ -1,12 +1,22 @@
 # tests/conftest.py
+import copy
+import logging.config
+
 import pytest
 from fastapi.testclient import TestClient
+
+
+def _get_logging_config():
+    from app.main import LOGGING_CONFIG
+
+    return LOGGING_CONFIG
 
 
 @pytest.fixture(autouse=True)
 def set_api_key_env(monkeypatch):
     # テスト専用固定キー
     monkeypatch.setenv("API_KEY", "test-secret")
+    monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
     yield
 
 
@@ -39,3 +49,27 @@ def reset_storage():
         with _lock_p:
             _products_by_id.clear()
             _prodid_by_name.clear()
+
+
+@pytest.fixture
+def audit_log_file(tmp_path, monkeypatch, request):
+    """ログファイルを一時ディレクトリに設定、テスト後に元に戻す"""
+    log_file = tmp_path / "auth_audit.log"
+
+    # 元の設定を保存 (deep copy)
+    LOGGING_CONFIG = _get_logging_config()
+    original_config = copy.deepcopy(LOGGING_CONFIG)
+
+    # 一時的なログファイルパスに変更
+    monkeypatch.setitem(LOGGING_CONFIG["handlers"]["file"], "filename", str(log_file))
+
+    # ロギング設定を適用
+    logging.config.dictConfig(LOGGING_CONFIG)
+
+    # テスト終了後に元の設定を復元
+    def restore_logging():
+        logging.config.dictConfig(original_config)
+
+    request.addfinalizer(restore_logging)
+
+    return log_file
