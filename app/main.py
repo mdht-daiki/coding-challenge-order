@@ -22,7 +22,7 @@ LOGGING_CONFIG = {
     "formatters": {
         "json": {
             "class": "pythonjsonlogger.json.JsonFormatter",
-            "format": "%(timestamp)s %(levelname)s %(message)s %(client_ip)s %(reason)s",
+            "format": "%(timestamp)s %(levelname)s %(message)s %(client_ip)s %(result)s %(key_hash)s %(reason)s",
         }
     },
     "loggers": {"app.core.auth": {"handlers": ["file"], "level": "INFO"}},
