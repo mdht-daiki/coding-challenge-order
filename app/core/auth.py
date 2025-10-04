@@ -1,7 +1,7 @@
 import logging
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Header, HTTPException, Request, status
 
@@ -42,7 +42,7 @@ async def require_api_key(
             "Authentication failed - missing API key",
             extra={
                 "client_ip": client_ip,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reason": "missing_header",
             },
         )
@@ -56,7 +56,7 @@ async def require_api_key(
             "Authentication failed - invalid API key",
             extra={
                 "client_ip": client_ip,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reason": "invalid_key",
             },
         )
@@ -68,5 +68,8 @@ async def require_api_key(
     # 成功ログ
     logger.info(
         "Authentication successful",
-        extra={"client_ip": client_ip, "timestamp": datetime.utcnow().isoformat()},
+        extra={
+            "client_ip": client_ip,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
     )
