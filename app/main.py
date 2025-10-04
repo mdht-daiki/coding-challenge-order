@@ -10,6 +10,7 @@ from .services_products import create_product
 
 LOGGING_CONFIG = {
     "version": 1,
+    "disable_existing_loggers": False,
     "handlers": {
         "file": {
             "class": "logging.FileHandler",
@@ -19,16 +20,21 @@ LOGGING_CONFIG = {
     },
     "formatters": {
         "json": {
-            "class": "logging.Formatter",
-            "format": '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "extra": %(extra)s}',
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s, %(levelname)s %(message)s %(client_ip)s %(timestamp)s %(reason)s",
         }
     },
     "loggers": {"app.core.auth": {"handlers": ["file"], "level": "INFO"}},
 }
 
-logging.config.dictConfig(LOGGING_CONFIG)
-
 app = FastAPI()
+
+
+@app.on_event("startup")
+def configure_logging():
+    logging.config.dictConfig(LOGGING_CONFIG)
+
+
 include_handlers(app)
 init_api_key()
 
