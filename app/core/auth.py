@@ -4,8 +4,9 @@ import hmac
 import logging
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from typing import Dict, Tuple
 
 from fastapi import Header, HTTPException, Request, status
 
@@ -17,6 +18,15 @@ logger = logging.getLogger(__name__)
 _EXPECTED_API_KEY: str | None = None
 # Secret used for generating HMAC of API keys for logging.
 _HASH_KEY: bytes | None = None
+
+# IPアドレスごとに失敗回数と最終失敗時刻を記録
+# 本番環境ではRedisなどの永続ストレージを使用推奨
+_failed_attempts: Dict[str, Tuple[int, datetime]] = {}
+_blocked_ips: Dict[str, datetime] = {}
+
+MAX_FAILED_ATTEMPTS = 5  # 5回失敗でブロック
+BLOCK_DURATION_MINUTES = 15  # 15分間ブロック
+FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
 
 
 def init_api_key():
@@ -57,18 +67,86 @@ def _compute_key_hash(key: str) -> str:
     return base64.b64encode(mac.digest()).decode("utf-8")[:16]
 
 
+def is_ip_blocked(client_ip: str) -> bool:
+    """IPアドレスがブロックされているか確認"""
+    if client_ip in _blocked_ips:
+        block_until = _blocked_ips[client_ip]
+        if datetime.now(timezone.utc) < block_until:
+            return True
+        else:
+            # ブロック期間が過ぎたので解除
+            del _blocked_ips[client_ip]
+            if client_ip in _failed_attempts:
+                del _failed_attempts[client_ip]
+    return False
+
+
+def record_failed_attempt(client_ip: str):
+    """認証失敗を記録し、必要に応じてブロック"""
+    now = datetime.now(timezone.utc)
+
+    if client_ip in _failed_attempts:
+        count, last_attempt = _failed_attempts[client_ip]
+        # 時間窓内の失敗ならカウントを増やす
+        if now - last_attempt < timedelta(minutes=FAILED_ATTEMPTS_WINDOW_MINUTES):
+            count += 1
+        else:
+            # 時間窓を過ぎたのでリセット
+            count = 1
+    else:
+        count = 1
+
+    _failed_attempts[client_ip] = (count, now)
+
+    # 閾値を超えたらブロック
+    if count >= MAX_FAILED_ATTEMPTS:
+        block_until = now + timedelta(minutes=BLOCK_DURATION_MINUTES)
+        _blocked_ips[client_ip] = block_until
+        logger.warning(
+            "IP blocked due to excessive failed attempts",
+            extra={
+                "client_ip": client_ip,
+                "failed_attempts": count,
+                "block_until": block_until.isoformat(),
+            },
+        )
+
+
+def reset_failed_attempts(client_ip: str):
+    """認証成功時に失敗カウントをリセット"""
+    if client_ip in _failed_attempts:
+        del _failed_attempts[client_ip]
+
+
 async def require_api_key(
     request: Request,
     x_api_key: str | None = Header(default=None, alias="X-API-KEY"),
 ):
     """
-    認可用の依存関数 + 監査ログ
+    認可用の依存関数 + 監査ログ + IPブロック
     - ヘッダ未指定 or 不一致 -> 401
     """
     client_ip = request.client.host if request and request.client else "unknown"
+
+    # IPブロックチェック
+    if is_ip_blocked(client_ip):
+        logger.warning(
+            "Blocked IT attempted access",
+            extra={
+                "client_ip": client_ip,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "reason": "ip_blocked",
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Too many failed authentication attempts. Please try again later.",
+        )
+
     expected = get_expected_api_key()
 
     if not x_api_key:
+        record_failed_attempt(client_ip)
         logger.warning(
             "Authentication failed - missing API key",
             extra={
@@ -86,6 +164,7 @@ async def require_api_key(
     key_hash = _compute_key_hash(x_api_key)
 
     if not secrets.compare_digest(x_api_key, expected):
+        record_failed_attempt(client_ip)
         logger.warning(
             "Authentication failed - invalid API key",
             extra={
@@ -102,6 +181,7 @@ async def require_api_key(
         )
 
     # 成功ログ
+    reset_failed_attempts(client_ip)
     logger.info(
         "Authentication successful",
         extra={
