@@ -1,15 +1,18 @@
-def test_global_rate_limit_unauthenticated(client, monkeypatch):
+def test_global_rate_limit_unauthenticated(monkeypatch):
     """認証前のグローバルレート制限を確認"""
-    # レート制限を有効化
-    monkeypatch.setenv("TESTING", "false")
+    import importlib
 
-    # 10回までは失敗するが429ではない（401 Unauthorized）
-    for i in range(10):
-        # response = post_json(
-        #     client,
-        #     "/customers",
-        #     {"name": f"User{i}", "email": f"user{i}@example.com"},
-        #     api_key="invalid-key",
-        # )
-        response = client.get("/health")
-        assert response.status_code == 200
+    from fastapi.testclient import TestClient
+
+    import app.main as main
+
+    monkeypatch.setenv("TESTING", "false")
+    importlib.reload(main)
+    try:
+        with TestClient(main.app, raise_server_exceptions=True) as client:
+            for _ in range(10):
+                assert client.get("/health").status_code == 200
+            assert client.get("/health").status_code == 429
+    finally:
+        monkeypatch.setenv("TESTING", "true")
+        importlib.reload(main)
