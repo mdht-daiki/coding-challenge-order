@@ -15,10 +15,13 @@ python -m venv venv
 # Linux/macOS
 source venv/bin/activate
 export API_KEY=test-secret
+export API_KEY_HASH_SECRET=hash-secret
 
 # Windows
 venv\Scripts\activate
 set API_KEY=test-secret
+set API_KEY_HASH_SECRET=hash-secret
+
 pip install -r requirements.txt
 ```
 

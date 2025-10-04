@@ -1,29 +1,39 @@
-import hashlib
-import hmac
+import base64
 import logging
 import os
 import secrets
 from datetime import datetime, timezone
 
+from argon2.low_level import Type as Argon2Type
+from argon2.low_level import hash_secret_raw
 from fastapi import Header, HTTPException, Request, status
 
 API_KEY_ENV = "API_KEY"
+HASH_KEY_ENV = "API_KEY_HASH_SECRET"
 logger = logging.getLogger(__name__)
 
 # アプリケーション起動時に一度だけ検証
 _EXPECTED_API_KEY: str | None = None
 # Secret used for generating HMAC of API keys for logging.
-_HASH_KEY = (
-    b"_replace_with_random_secret_value_"  # Replace with a secure secret per deployment
-)
+_HASH_KEY: bytes | None = None
 
 
 def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
-    global _EXPECTED_API_KEY
+    global _EXPECTED_API_KEY, _HASH_KEY
     _EXPECTED_API_KEY = os.getenv(API_KEY_ENV)
     if not _EXPECTED_API_KEY:
         raise RuntimeError(f"Environment variable {API_KEY_ENV} is not set")
+    hash_secret = os.getenv(HASH_KEY_ENV)
+    if not hash_secret:
+        raise RuntimeError(f"Environment variable {HASH_KEY_ENV} is not set")
+    _HASH_KEY = hash_secret.encode()
+
+
+def _get_hash_key() -> bytes:
+    if _HASH_KEY is None:
+        raise RuntimeError("API key hash secret is not initialized")
+    return _HASH_KEY
 
 
 def get_expected_api_key() -> str:
@@ -45,10 +55,18 @@ async def require_api_key(
 
     # API キーのハッシュ値を識別子として使用
     def get_key_hash(key: str) -> str:
-        # Use HMAC-SHA256 to prevent hash enumeration
-        return hmac.new(_HASH_KEY, key.encode(), hashlib.sha256).hexdigest()[
-            :16
-        ]  # 最初の16文字
+        # Use Argon2id with a constant salt to avoid hash enumeration but keep output stable per key
+        raw_hash = hash_secret_raw(
+            secret=key.encode(),
+            salt=_get_hash_key(),  # Use deployment-wide constant salt
+            time_cost=2,
+            memory_cost=2**16,
+            parallelism=1,
+            hash_len=16,
+            type=Argon2Type.ID,
+        )
+        # Encode for logging (use first 16 chars as before)
+        return base64.b64encode(raw_hash).decode("utf-8")[:16]
 
     if not x_api_key:
         logger.warning(
