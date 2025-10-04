@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import logging
 import os
 import secrets
@@ -11,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 # アプリケーション起動時に一度だけ検証
 _EXPECTED_API_KEY: str | None = None
+# Secret used for generating HMAC of API keys for logging.
+_HASH_KEY = (
+    b"_replace_with_random_secret_value_"  # Replace with a secure secret per deployment
+)
 
 
 def init_api_key():
@@ -40,7 +45,10 @@ async def require_api_key(
 
     # API キーのハッシュ値を識別子として使用
     def get_key_hash(key: str) -> str:
-        return hashlib.sha256(key.encode()).hexdigest()[:16]  # 最初の16文字
+        # Use HMAC-SHA256 to prevent hash enumeration
+        return hmac.new(_HASH_KEY, key.encode(), hashlib.sha256).hexdigest()[
+            :16
+        ]  # 最初の16文字
 
     if not x_api_key:
         logger.warning(
