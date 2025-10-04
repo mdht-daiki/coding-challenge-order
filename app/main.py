@@ -86,12 +86,38 @@ app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
 
-# レート制限超過時のハンドラー
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
+    """
+    レート制限超過時のカスタムエラーハンドラー
+    既存のエラーレスポンス形式 {"code", "message", "details"} に統一
+    """
+    # SlowAPI のヘッダー情報を取得（利用可能な場合）
+    headers = {}
+    if hasattr(exc, "headers") and exc.headers:
+        headers = exc.headers
+
+    # 詳細情報を構築
+    details = {
+        "limit": str(exc.detail) if hasattr(exc, "detail") else "制限に達しました"
+    }
+
+    # X-RateLimit-* ヘッダーから情報を抽出
+    if "X-RateLimit-Limit" in headers:
+        details["rate_limit"] = headers["X-RateLimit-Limit"]
+    if "X-RateLimit-Remaining" in headers:
+        details["remaining"] = headers["X-RateLimit-Remaining"]
+    if "X-RateLimit-Reset" in headers:
+        details["reset_at"] = headers["X-RateLimit-Reset"]
+
     return JSONResponse(
         status_code=429,
-        content={"detail": "Too many requests. Please try again later."},
+        content={
+            "code": "RATE_LIMIT_EXCEEDED",
+            "message": "リクエスト数が制限を超えました。しばらくしてから再試行してください。",
+            "details": details,
+        },
+        headers=headers,  # レート制限情報をヘッダーにも含める
     )
 
 

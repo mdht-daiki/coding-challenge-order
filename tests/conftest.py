@@ -29,6 +29,22 @@ def client():
         yield c
 
 
+@pytest.fixture
+def client_with_rate_limit(monkeypatch):
+    """レート制限が有効なテストクライアント"""
+    # レート制限を有効化
+    monkeypatch.setenv("TESTING", "false")
+    monkeypatch.setenv("API_KEY", "test-secret")
+    monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        yield client
+
+
 @pytest.fixture(autouse=True)
 def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""

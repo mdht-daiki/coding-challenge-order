@@ -1,18 +1,46 @@
-def test_global_rate_limit_unauthenticated(monkeypatch):
+def test_global_rate_limit_unauthenticated(client_with_rate_limit):
     """認証前のグローバルレート制限を確認"""
-    import importlib
+    for i in range(10):
+        response = client_with_rate_limit.get("/health")
+        assert response.status_code == 200, f"Request {i+1} should succeed"
 
-    from fastapi.testclient import TestClient
+    # 11回目はグローバルレート制限超過で429エラー
+    response = client_with_rate_limit.get("/health")
 
-    import app.main as main
+    assert response.status_code == 429
+    data = response.json()
 
-    monkeypatch.setenv("TESTING", "false")
-    importlib.reload(main)
-    try:
-        with TestClient(main.app, raise_server_exceptions=True) as client:
-            for _ in range(10):
-                assert client.get("/health").status_code == 200
-            assert client.get("/health").status_code == 429
-    finally:
-        monkeypatch.setenv("TESTING", "true")
-        importlib.reload(main)
+    assert "code" in data
+    assert data["code"] == "RATE_LIMIT_EXCEEDED"
+    assert "message" in data
+    assert "details" in data
+    assert isinstance(data["details"], dict)
+
+
+def test_auth_rate_limit_response_format(client_with_rate_limit):
+    """認証エンドポイントのレート制限エラーが既存のエラー形式に従うことを確認"""
+    # /customersエンドポイントにAUTH_RATE_LIMIT（5/minute）まで連続リクエスト
+    for i in range(5):
+        response = client_with_rate_limit.post(
+            "/customers",
+            json={"name": f"User{i}", "email": f"user{i}@example.com"},
+            headers={"X-API-KEY": "test-secret"},
+        )
+        assert response.status_code == 201, f"Request {i+1} should succeed"
+
+    # 6回目はAUTH_RATE_LIMIT超過で429エラー
+    response = client_with_rate_limit.post(
+        "/customers",
+        json={"name": "User6", "email": "user6@example.com"},
+        headers={"X-API-KEY": "test-secret"},
+    )
+
+    assert response.status_code == 429
+    data = response.json()
+
+    # 既存のエラー形式に従っているか確認
+    assert "code" in data
+    assert data["code"] == "RATE_LIMIT_EXCEEDED"
+    assert "message" in data
+    assert "details" in data
+    assert isinstance(data["details"], dict)
