@@ -77,14 +77,6 @@ limiter = Limiter(
 
 app = FastAPI(title="Order Management API", version="1.0.0", lifespan=lifespan)
 
-include_handlers(app)
-
-# Limiterをアプリケーションにバインド
-app.state.limiter = limiter
-
-# SlowAPIMiddlewareを追加（これが自動的にレート制限をチェック）
-app.add_middleware(SlowAPIMiddleware)
-
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
@@ -119,6 +111,15 @@ async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
         },
         headers=headers,  # レート制限情報をヘッダーにも含める
     )
+
+
+include_handlers(app)
+
+# Limiterをアプリケーションにバインド
+app.state.limiter = limiter
+
+# SlowAPIMiddlewareを追加（これが自動的にレート制限をチェック）
+app.add_middleware(SlowAPIMiddleware)
 
 
 @app.get("/health")
