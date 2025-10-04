@@ -17,6 +17,7 @@ def set_api_key_env(monkeypatch):
     # テスト専用固定キー
     monkeypatch.setenv("API_KEY", "test-secret")
     monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
+    monkeypatch.setenv("TESTING", "true")
     yield
 
 
