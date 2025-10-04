@@ -1,4 +1,5 @@
 import logging.config
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Response, status
 
@@ -27,16 +28,19 @@ LOGGING_CONFIG = {
     "loggers": {"app.core.auth": {"handlers": ["file"], "level": "INFO"}},
 }
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-def configure_logging():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # スタートアップ処理
     logging.config.dictConfig(LOGGING_CONFIG)
+    init_api_key()
+    yield
+    # シャットダウン処理（必要に応じて追加）
 
+
+app = FastAPI(lifespan=lifespan)
 
 include_handlers(app)
-init_api_key()
 
 
 @app.get("/health")
