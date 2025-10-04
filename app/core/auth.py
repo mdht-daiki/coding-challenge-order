@@ -36,6 +36,9 @@ def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
     global _VALID_API_KEYS, _HASH_KEY
 
+    # 再初期化時に既存のキーをクリア
+    _VALID_API_KEYS.clear()
+
     # 単一キー(後方互換性)
     single_key = os.getenv(API_KEY_ENV)
     if single_key:

@@ -35,6 +35,7 @@ def test_removed_key_fails_authentication(client, monkeypatch):
     assert r.status_code == 201
 
     # 新キーに切り替え(旧キーを削除)
+    monkeypatch.delenv("API_KEY", raising=False)
     monkeypatch.setenv("API_KEYS", "new-test-key")
     # アプリケーションを再初期化するか、init_api_key()を再実行
     from app.core.auth import init_api_key
