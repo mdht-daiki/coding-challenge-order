@@ -44,6 +44,7 @@ def test_auth_success_logs_to_audit_file(client, audit_log_file):
     assert "Authentication successful" in last_log["message"]
     assert "client_ip" in last_log
     assert "timestamp" in last_log
+    assert "key_hash" in last_log
 
 
 def test_auth_failure_missing_key_logs_to_audit_file(client, audit_log_file):
