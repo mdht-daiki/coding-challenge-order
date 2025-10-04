@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-from app.main import LOGGING_CONFIG
 from tests.helpers import post_json
 
 
@@ -20,20 +19,13 @@ def _read_new_log_entries(log_file: Path, initial_count: int) -> list[dict]:
         return [json.loads(line) for line in new_lines]
 
 
-def test_auth_success_logs_to_audit_file(client, tmp_path, monkeypatch):
+def test_auth_success_logs_to_audit_file(client, audit_log_file):
     """認証成功時に監査ログが記録されることを確認"""
-    log_file = tmp_path / "auth_audit.log"
-
-    monkeypatch.setitem(LOGGING_CONFIG["handlers"]["file"], "filename", str(log_file))
-
-    import logging.config
-
-    logging.config.dictConfig(LOGGING_CONFIG)
 
     # ログファイルが存在する場合、既存の行数を記録
     initial_line_count = 0
-    if log_file.exists():
-        with open(log_file, "r") as f:
+    if audit_log_file.exists():
+        with open(audit_log_file, "r") as f:
             initial_line_count = len(f.readlines())
 
     # 有効な API key でリクエスト
@@ -45,7 +37,7 @@ def test_auth_success_logs_to_audit_file(client, tmp_path, monkeypatch):
     )
     assert response.status_code == 201
 
-    logs = _read_new_log_entries(log_file, initial_line_count)
+    logs = _read_new_log_entries(audit_log_file, initial_line_count)
     last_log = logs[-1]
 
     assert last_log["levelname"] == "INFO"
@@ -54,19 +46,12 @@ def test_auth_success_logs_to_audit_file(client, tmp_path, monkeypatch):
     assert "timestamp" in last_log
 
 
-def test_auth_failure_missing_key_logs_to_audit_file(client, tmp_path, monkeypatch):
+def test_auth_failure_missing_key_logs_to_audit_file(client, audit_log_file):
     """API key が未指定の場合に監査ログが記録されることを確認"""
-    log_file = tmp_path / "auth_audit.log"
-
-    monkeypatch.setitem(LOGGING_CONFIG["handlers"]["file"], "filename", str(log_file))
-
-    import logging.config
-
-    logging.config.dictConfig(LOGGING_CONFIG)
 
     initial_line_count = 0
-    if log_file.exists():
-        with open(log_file, "r") as f:
+    if audit_log_file.exists():
+        with open(audit_log_file, "r") as f:
             initial_line_count = len(f.readlines())
 
     # API key なしでリクエスト
@@ -75,7 +60,7 @@ def test_auth_failure_missing_key_logs_to_audit_file(client, tmp_path, monkeypat
     )
     assert response.status_code == 401
 
-    logs = _read_new_log_entries(log_file, initial_line_count)
+    logs = _read_new_log_entries(audit_log_file, initial_line_count)
     last_log = logs[-1]
 
     assert last_log["levelname"] == "WARNING"
@@ -84,19 +69,12 @@ def test_auth_failure_missing_key_logs_to_audit_file(client, tmp_path, monkeypat
     assert "client_ip" in last_log
 
 
-def test_auth_failure_invalid_key_logs_to_audit_file(client, tmp_path, monkeypatch):
+def test_auth_failure_invalid_key_logs_to_audit_file(client, audit_log_file):
     """無効な API key の場合に監査ログが記録されることを確認"""
-    log_file = tmp_path / "auth_audit.log"
-
-    monkeypatch.setitem(LOGGING_CONFIG["handlers"]["file"], "filename", str(log_file))
-
-    import logging.config
-
-    logging.config.dictConfig(LOGGING_CONFIG)
 
     initial_line_count = 0
-    if log_file.exists():
-        with open(log_file, "r") as f:
+    if audit_log_file.exists():
+        with open(audit_log_file, "r") as f:
             initial_line_count = len(f.readlines())
 
     # 無効な API key でリクエスト
@@ -108,7 +86,7 @@ def test_auth_failure_invalid_key_logs_to_audit_file(client, tmp_path, monkeypat
     )
     assert response.status_code == 401
 
-    logs = _read_new_log_entries(log_file, initial_line_count)
+    logs = _read_new_log_entries(audit_log_file, initial_line_count)
     last_log = logs[-1]
 
     assert last_log["levelname"] == "WARNING"
