@@ -34,7 +34,7 @@ FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
 
 def init_api_key():
     """起動時に呼び出してAPI_KEYを検証・キャッシュ"""
-    global _VALID_API_KEYS
+    global _VALID_API_KEYS, _HASH_KEY
 
     # 単一キー(後方互換性)
     single_key = os.getenv(API_KEY_ENV)

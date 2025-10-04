@@ -15,7 +15,7 @@ def _get_logging_config():
 @pytest.fixture(autouse=True)
 def set_api_key_env(monkeypatch):
     # テスト専用固定キー
-    monkeypatch.setenv("API_KEY", "test-secret")
+    # monkeypatch.setenv("API_KEY", "test-secret")
     monkeypatch.setenv("API_KEYS", "test-secret,new-test-key")
     monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
     monkeypatch.setenv("TESTING", "true")
@@ -37,7 +37,7 @@ def client_with_rate_limit(monkeypatch):
 
     # レート制限を有効化
     monkeypatch.setenv("TESTING", "false")
-    monkeypatch.setenv("API_KEY", "test-secret")
+    # monkeypatch.setenv("API_KEY", "test-secret")
     monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
 
     from fastapi.testclient import TestClient
