@@ -1,7 +1,10 @@
 import logging.config
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Response, status
+from fastapi import Depends, FastAPI, Request, Response, status
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from .core.auth import init_api_key, require_api_key
 from .core.exception_handlers import include_handlers
@@ -42,6 +45,10 @@ app = FastAPI(lifespan=lifespan)
 
 include_handlers(app)
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.get("/health")
 async def health_check() -> dict[str, bool]:
@@ -54,7 +61,10 @@ async def health_check() -> dict[str, bool]:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-async def post_customer(body: CustomerCreate, response: Response) -> CustomerWithId:
+@limiter.limit("5/minute")  # 1分間に5回まで
+async def post_customer(
+    request: Request, body: CustomerCreate, response: Response
+) -> CustomerWithId:
     customer = create_customer(body.name, body.email)
     response.headers["Location"] = f"/customers/{customer.cust_id}"
     return customer
@@ -66,7 +76,10 @@ async def post_customer(body: CustomerCreate, response: Response) -> CustomerWit
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-async def post_product(body: ProductCreate, response: Response) -> ProductWithId:
+@limiter.limit("5/minute")  # 1分間に5回まで
+async def post_product(
+    request: Request, body: ProductCreate, response: Response
+) -> ProductWithId:
     product = create_product(body.name, body.unit_price)
     response.headers["Location"] = f"/products/{product.prod_id}"
     return product
