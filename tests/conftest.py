@@ -32,6 +32,8 @@ def client():
 @pytest.fixture
 def client_with_rate_limit(monkeypatch):
     """レート制限が有効なテストクライアント"""
+    import importlib
+
     # レート制限を有効化
     monkeypatch.setenv("TESTING", "false")
     monkeypatch.setenv("API_KEY", "test-secret")
@@ -39,10 +41,18 @@ def client_with_rate_limit(monkeypatch):
 
     from fastapi.testclient import TestClient
 
-    from app.main import app
+    import app.main as main_module
 
-    with TestClient(app) as client:
-        yield client
+    # モジュールを再読み込みして新しいTESTING値を反映
+    importlib.reload(main_module)
+
+    try:
+        with TestClient(main_module.app) as client:
+            yield client
+    finally:
+        # テスト後は元の設定に戻す
+        monkeypatch.setenv("TESTING", "true")
+        importlib.reload(main_module)
 
 
 @pytest.fixture(autouse=True)
