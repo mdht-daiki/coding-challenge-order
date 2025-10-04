@@ -23,6 +23,9 @@ GLOBAL_RATE_LIMIT = "100/minute" if TESTING else "10/minute"
 # 認証済みエンドポイント用
 AUTH_RATE_LIMIT = "10000/minute" if TESTING else "5/minute"
 
+# Redis接続情報を環境変数から取得（本番環境用）
+REDIS_URL = os.getenv("REDIS_URL", "")
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -73,6 +76,7 @@ limiter = Limiter(
     key_func=get_api_key_for_limit,
     default_limits=[GLOBAL_RATE_LIMIT],  # ← グローバル制限
     headers_enabled=True,  # X-RateLimit-* ヘッダーを有効化
+    storage_uri=REDIS_URL if REDIS_URL else None,  # 本番環境ではRedisを使用
 )
 
 app = FastAPI(title="Order Management API", version="1.0.0", lifespan=lifespan)
