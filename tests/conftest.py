@@ -32,9 +32,12 @@ def client():
 @pytest.fixture(autouse=True)
 def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
+    from app.core.auth import _blocked_ips, _failed_attempts
     from app.services import _custid_by_email, _customers_by_id, _lock
     from app.services_products import _lock_p, _prodid_by_name, _products_by_id
 
+    _blocked_ips.clear()
+    _failed_attempts.clear()
     with _lock:
         _customers_by_id.clear()
         _custid_by_email.clear()
@@ -44,6 +47,8 @@ def reset_storage():
     try:
         yield
     finally:
+        _blocked_ips.clear()
+        _failed_attempts.clear()
         with _lock:
             _customers_by_id.clear()
             _custid_by_email.clear()
@@ -55,6 +60,10 @@ def reset_storage():
 @pytest.fixture
 def audit_log_file(tmp_path, monkeypatch, request):
     """ログファイルを一時ディレクトリに設定、テスト後に元に戻す"""
+    import os
+
+    print(f"API_KEY in audit_log_file: {os.getenv('API_KEY')}")  # ← デバッグ用
+    print(f"TESTING in audit_log_file: {os.getenv('TESTING')}")  # ← デバッグ用
     log_file = tmp_path / "auth_audit.log"
 
     # 元の設定を保存 (deep copy)

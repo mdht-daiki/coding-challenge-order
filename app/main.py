@@ -3,8 +3,11 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request, Response, status
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.requests import Request as StarletteRequest
 
 from .core.auth import init_api_key, require_api_key
 from .core.exception_handlers import include_handlers
@@ -15,13 +18,10 @@ from .services_products import create_product
 # テスト環境かどうかを判定
 TESTING = os.getenv("TESTING", "false").lower() == "true"
 
-# レート制限の設定（テスト環境では無効化）
-if TESTING:
-    # テスト環境では実質的に無制限
-    RATE_LIMIT = "10000/minute"
-else:
-    # 本番環境では5回/分
-    RATE_LIMIT = "5/minute"
+# グローバルレート制限
+GLOBAL_RATE_LIMIT = "100/minute" if TESTING else "10/minute"
+# 認証済みエンドポイント用
+AUTH_RATE_LIMIT = "10000/minute" if TESTING else "5/minute"
 
 
 LOGGING_CONFIG = {
@@ -68,13 +68,31 @@ def get_api_key_for_limit(request: Request) -> str:
     return api_key or "unknown"
 
 
-app = FastAPI(lifespan=lifespan)
+# Limiterの初期化（default_limitsでグローバル制限を設定）
+limiter = Limiter(
+    key_func=get_api_key_for_limit,
+    default_limits=[GLOBAL_RATE_LIMIT],  # ← グローバル制限
+    headers_enabled=True,  # X-RateLimit-* ヘッダーを有効化
+)
+
+app = FastAPI(title="Order Management API", version="1.0.0", lifespan=lifespan)
 
 include_handlers(app)
 
-limiter = Limiter(key_func=get_api_key_for_limit)
+# Limiterをアプリケーションにバインド
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# SlowAPIMiddlewareを追加（これが自動的にレート制限をチェック）
+app.add_middleware(SlowAPIMiddleware)
+
+
+# レート制限超過時のハンドラー
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please try again later."},
+    )
 
 
 @app.get("/health")
@@ -88,7 +106,7 @@ async def health_check() -> dict[str, bool]:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-@limiter.limit(RATE_LIMIT)
+@limiter.limit(AUTH_RATE_LIMIT)
 async def post_customer(
     request: Request,  # slowapi のレート制限に必要
     body: CustomerCreate,
@@ -105,7 +123,7 @@ async def post_customer(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-@limiter.limit(RATE_LIMIT)
+@limiter.limit(AUTH_RATE_LIMIT)
 async def post_product(
     request: Request,  # slowapi のレート制限に必要
     body: ProductCreate,
