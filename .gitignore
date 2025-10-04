@@ -19,3 +19,5 @@ htmlcov/
 # VSCode / JetBrains
 .vscode/
 .idea/
+
+*.log

@@ -29,15 +29,14 @@ repos:
       - id: trailing-whitespace
       - id: check-added-large-files
 
-  # # （任意）ローカルフック：スモークpytest
-  # # ※ tests/test_smoke.py を後で作ったら有効化
-  # - repo: local
-  #   hooks:
-  #     - id: pytest-smoke
-  #       name: pytest (smoke)
-  #       entry: bash -lc 'pytest -q tests/test_smoke.py'
-  #       language: system
-  #       types: [python]
-  #       pass_filenames: false
-  #       stages: [commit] # コミット時に実行
-  #       # ↑ スモークをまだ書いていない間は、このブロックをコメントアウトでもOK
+  # （任意）ローカルフック：スモークpytest
+  # ※ tests/test_smoke.py を後で作ったら有効化
+  - repo: local
+    hooks:
+      - id: pytest-smoke
+        name: pytest (smoke)
+        entry: bash -lc 'pytest -q tests/test_smoke.py'
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [commit] # コミット時に実行

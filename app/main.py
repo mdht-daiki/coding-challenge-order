@@ -1,3 +1,5 @@
+import logging.config
+
 from fastapi import Depends, FastAPI, Response, status
 
 from .core.auth import init_api_key, require_api_key
@@ -5,6 +7,26 @@ from .core.exception_handlers import include_handlers
 from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
 from .services import create_customer
 from .services_products import create_product
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "handlers": {
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "auth_audit.log",
+            "formatter": "json",
+        }
+    },
+    "formatters": {
+        "json": {
+            "class": "logging.Formatter",
+            "format": '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "extra": %(extra)s}',
+        }
+    },
+    "loggers": {"app.core.auth": {"handlers": ["file"], "level": "INFO"}},
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
 
 app = FastAPI()
 include_handlers(app)
