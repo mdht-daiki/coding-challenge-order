@@ -1,4 +1,5 @@
 import logging.config
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request, Response, status
@@ -11,6 +12,18 @@ from .core.exception_handlers import include_handlers
 from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
 from .services import create_customer
 from .services_products import create_product
+
+# テスト環境かどうかを判定
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+
+# レート制限の設定（テスト環境では無効化）
+if TESTING:
+    # テスト環境では実質的に無制限
+    RATE_LIMIT = "10000/minute"
+else:
+    # 本番環境では5回/分
+    RATE_LIMIT = "5/minute"
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -70,9 +83,11 @@ async def health_check() -> dict[str, bool]:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-@limiter.limit("5/minute")  # 1分間に5回まで
+@limiter.limit(RATE_LIMIT)
 async def post_customer(
-    request: Request, body: CustomerCreate, response: Response
+    request: Request,  # slowapi のレート制限に必要
+    body: CustomerCreate,
+    response: Response,
 ) -> CustomerWithId:
     customer = create_customer(body.name, body.email)
     response.headers["Location"] = f"/customers/{customer.cust_id}"
@@ -85,9 +100,11 @@ async def post_customer(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_api_key)],
 )
-@limiter.limit("5/minute")  # 1分間に5回まで
+@limiter.limit(RATE_LIMIT)
 async def post_product(
-    request: Request, body: ProductCreate, response: Response
+    request: Request,  # slowapi のレート制限に必要
+    body: ProductCreate,
+    response: Response,
 ) -> ProductWithId:
     product = create_product(body.name, body.unit_price)
     response.headers["Location"] = f"/products/{product.prod_id}"
