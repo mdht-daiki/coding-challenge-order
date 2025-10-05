@@ -182,7 +182,7 @@ async def post_order(
     request: Request,  # slowapi のレート制限に必要
     body: OrderCreate,
     response: Response,
-) -> ProductWithId:
+) -> OrderCreateResponse:
     order = create_order(body)
     response.headers["Location"] = f"/orders/{order.order_id}"
     return order
