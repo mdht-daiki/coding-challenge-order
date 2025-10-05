@@ -12,7 +12,7 @@ from starlette.requests import Request as StarletteRequest
 from .core.auth import init_api_key, require_api_key
 from .core.exception_handlers import include_handlers
 from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
-from .services import create_customer
+from .services_customers import create_customer
 from .services_products import create_product
 
 # テスト環境かどうかを判定

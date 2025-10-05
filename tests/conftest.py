@@ -60,7 +60,7 @@ def client_with_rate_limit(monkeypatch):
 def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
     from app.core.auth import _blocked_ips, _failed_attempts
-    from app.services import _custid_by_email, _customers_by_id, _lock
+    from app.services_customers import _custid_by_email, _customers_by_id, _lock
     from app.services_products import _lock_p, _prodid_by_name, _products_by_id
 
     _blocked_ips.clear()
