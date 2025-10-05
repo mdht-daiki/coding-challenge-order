@@ -11,8 +11,16 @@ from starlette.requests import Request as StarletteRequest
 
 from .core.auth import init_api_key, require_api_key
 from .core.exception_handlers import include_handlers
-from .schemas import CustomerCreate, CustomerWithId, ProductCreate, ProductWithId
+from .schemas import (
+    CustomerCreate,
+    CustomerWithId,
+    OrderCreate,
+    OrderCreateResponse,
+    ProductCreate,
+    ProductWithId,
+)
 from .services_customers import create_customer
+from .services_orders import create_order
 from .services_products import create_product
 
 # テスト環境かどうかを判定
@@ -161,3 +169,20 @@ async def post_product(
     product = create_product(body.name, body.unit_price)
     response.headers["Location"] = f"/products/{product.prod_id}"
     return product
+
+
+@app.post(
+    "/orders",
+    response_model=OrderCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_api_key)],
+)
+@limiter.limit(AUTH_RATE_LIMIT)
+async def post_order(
+    request: Request,  # slowapi のレート制限に必要
+    body: OrderCreate,
+    response: Response,
+) -> ProductWithId:
+    order = create_order(body)
+    response.headers["Location"] = f"/orders/{order.order_id}"
+    return order
