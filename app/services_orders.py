@@ -67,4 +67,5 @@ def create_order(payload: OrderCreate) -> OrderCreateResponse:
         order = OrderCreateResponse(
             order_id=order_id, order_date=date.today(), total_amount=total, items=items
         )
+        _orders_by_id[order_id] = order
         return order
