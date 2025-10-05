@@ -64,14 +64,14 @@ class ProductWithId(BaseModel):
 
 
 class OrderItemCreate(BaseModel):
-    prod_id: str
+    prod_id: str = Field(min_length=1, max_length=100)
     qty: int = Field(ge=1, le=1000)
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 class OrderCreate(BaseModel):
-    cust_id: str
+    cust_id: str = Field(min_length=1)
     items: List[OrderItemCreate] = Field(min_length=1, max_length=100)
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
@@ -79,16 +79,16 @@ class OrderCreate(BaseModel):
 
 class OrderItemCreateResponse(BaseModel):
     line_no: int = Field(ge=1)
-    prod_id: str
+    prod_id: str = Field(min_length=1, max_length=100)
     qty: int = Field(ge=1, le=1000)
-    unit_price: int = Field(ge=0, le=1_000_000)
+    unit_price: int = Field(ge=1, le=1_000_000)
     line_amount: int = Field(ge=0, le=1_000_000_000)
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 class OrderCreateResponse(BaseModel):
-    order_id: str
+    order_id: str = Field(min_length=1)
     order_date: date
     total_amount: int = Field(ge=0)
     items: List[OrderItemCreateResponse]
