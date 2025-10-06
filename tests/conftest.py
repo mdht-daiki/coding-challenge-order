@@ -1,15 +1,36 @@
 # tests/conftest.py
 import copy
 import logging.config
+from datetime import date as _date
 
 import pytest
 from fastapi.testclient import TestClient
+
+FIXED_TODAY = (2025, 10, 6)
 
 
 def _get_logging_config():
     from app.main import LOGGING_CONFIG
 
     return LOGGING_CONFIG
+
+
+@pytest.fixture
+def frozen_today(monkeypatch):
+    """
+    app.services_orders モジュール内の date.today() を固定する。
+    """
+
+    class _FixedDate(_date):
+        @classmethod
+        def today(cls):
+            y, m, d = FIXED_TODAY
+            return cls(y, m, d)
+
+    import app.services_orders as mod
+
+    monkeypatch.setattr(mod, "date", _FixedDate, raising=True)
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -61,7 +82,7 @@ def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
     from app.core.auth import _blocked_ips, _failed_attempts
     from app.services_customers import _custid_by_email, _customers_by_id, _lock
-    from app.services_orders import _lock_o, _orders_by_id
+    from app.services_orders import _lock_o, _orders_by_custid, _orders_by_id
     from app.services_products import _lock_p, _prodid_by_name, _products_by_id
 
     _blocked_ips.clear()
@@ -74,6 +95,7 @@ def reset_storage():
         _prodid_by_name.clear()
     with _lock_o:
         _orders_by_id.clear()
+        _orders_by_custid.clear()
     try:
         yield
     finally:
@@ -87,6 +109,7 @@ def reset_storage():
             _prodid_by_name.clear()
         with _lock_o:
             _orders_by_id.clear()
+            _orders_by_custid.clear()
 
 
 @pytest.fixture

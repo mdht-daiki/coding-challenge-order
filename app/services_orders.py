@@ -1,10 +1,16 @@
 import threading
 import uuid
+from collections import defaultdict
 from datetime import date
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 
 from .core.errors import Conflict, NotFound
-from .schemas import OrderCreate, OrderCreateResponse, OrderItemCreateResponse
+from .schemas import (
+    OrderCreate,
+    OrderCreateResponse,
+    OrderItemCreateResponse,
+    OrderSummary,
+)
 from .services_customers import _customers_by_id
 from .services_customers import _lock as _lock_c
 from .services_products import _lock_p, _products_by_id
@@ -12,6 +18,7 @@ from .services_products import _lock_p, _products_by_id
 # In-memory storage
 _lock_o = threading.RLock()
 _orders_by_id: Dict[str, OrderCreateResponse] = {}
+_orders_by_custid: Dict[str, List[OrderCreateResponse]] = defaultdict(list)
 _line_no = 1
 
 
@@ -25,7 +32,9 @@ def new_order_id() -> str:
         raise RuntimeError("Failed to generate unique order ID after maximum attempts")
 
 
-def create_order(payload: OrderCreate) -> OrderCreateResponse:
+def create_order(
+    payload: OrderCreate, *, today_provider=date.today
+) -> OrderCreateResponse:
     """
     顧客・商品の存在チェックが必要
     アイテム(prodId)の重複 NG (同じ商品が複数行に出ない)
@@ -65,7 +74,59 @@ def create_order(payload: OrderCreate) -> OrderCreateResponse:
             _line_no += 1
 
         order = OrderCreateResponse(
-            order_id=order_id, order_date=date.today(), total_amount=total, items=items
+            order_id=order_id,
+            order_date=today_provider(),
+            total_amount=total,
+            items=items,
         )
         _orders_by_id[order_id] = order
+        _orders_by_custid[payload.cust_id].append(order)
         return order
+
+
+def search_orders(
+    cust_id: Optional[str],
+    from_date: Optional[date],
+    to_date: Optional[date],
+    page: int,
+    size: int,
+) -> Tuple[List[OrderSummary], int]:
+    # ロック内でスナップショットをコピー
+    with _lock_o:
+        # orders = (
+        #     list(_orders_by_custid[cust_id])
+        #     if cust_id
+        #     else list(_orders_by_custid.values())
+        # )
+        if cust_id:
+            orders = list(_orders_by_custid[cust_id])
+        else:
+            orders = []
+            for order_list in _orders_by_custid.values():
+                orders.extend(order_list)
+
+    # フィルタ
+    if from_date:
+        orders = [o for o in orders if o.order_date >= from_date]
+    if to_date:
+        orders = [o for o in orders if o.order_date <= to_date]
+
+    # 並び順：order_date 降順
+    orders.sort(key=lambda o: o.order_date, reverse=True)
+
+    total_count = len(orders)
+
+    # ページング
+    start = page * size
+    end = start + size
+    page_items = orders[start:end]
+
+    summaries = [
+        OrderSummary(
+            order_id=o.order_id,
+            order_date=o.order_date,
+            total_amount=o.total_amount,
+        )
+        for o in page_items
+    ]
+    return summaries, total_count
