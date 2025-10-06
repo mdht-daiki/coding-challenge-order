@@ -18,7 +18,7 @@ from .services_products import _lock_p, _products_by_id
 # In-memory storage
 _lock_o = threading.RLock()
 _orders_by_id: Dict[str, OrderCreateResponse] = {}
-_orders_by_custid: Dict[str, OrderCreateResponse] = defaultdict(list)
+_orders_by_custid: Dict[str, List[OrderCreateResponse]] = defaultdict(list)
 _line_no = 1
 
 
@@ -93,11 +93,17 @@ def search_orders(
 ) -> Tuple[List[OrderSummary], int]:
     # ロック内でスナップショットをコピー
     with _lock_o:
-        orders = (
-            list(_orders_by_custid[cust_id])
-            if cust_id
-            else list(_orders_by_custid.values())
-        )
+        # orders = (
+        #     list(_orders_by_custid[cust_id])
+        #     if cust_id
+        #     else list(_orders_by_custid.values())
+        # )
+        if cust_id:
+            orders = list(_orders_by_custid[cust_id])
+        else:
+            orders = []
+            for order_list in _orders_by_custid.values():
+                orders.extend(order_list)
 
     # フィルタ
     if from_date:
@@ -106,8 +112,6 @@ def search_orders(
         orders = [o for o in orders if o.order_date <= to_date]
 
     # 並び順：order_date 降順
-    print(orders)
-    print(type(orders))
     orders.sort(key=lambda o: o.order_date, reverse=True)
 
     total_count = len(orders)

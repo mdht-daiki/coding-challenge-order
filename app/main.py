@@ -205,7 +205,7 @@ async def get_order(
 ):
     items, total_count = search_orders(cust_id, from_date, to, page, size)
     return {
-        "list": [i.model_dump() for i in items],
+        "list": [i.model_dump(by_alias=True) for i in items],
         "totalCount": total_count,
         "page": page,
         "size": size,
