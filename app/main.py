@@ -1,8 +1,10 @@
 import logging.config
 import os
 from contextlib import asynccontextmanager
+from datetime import date
+from typing import Optional
 
-from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi import Depends, FastAPI, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
@@ -20,7 +22,7 @@ from .schemas import (
     ProductWithId,
 )
 from .services_customers import create_customer
-from .services_orders import create_order
+from .services_orders import create_order, search_orders
 from .services_products import create_product
 
 # テスト環境かどうかを判定
@@ -186,3 +188,25 @@ async def post_order(
     order = create_order(body)
     response.headers["Location"] = f"/orders/{order.order_id}"
     return order
+
+
+@app.get(
+    "/orders", status_code=status.HTTP_200_OK, dependencies=[Depends(require_api_key)]
+)
+@limiter.limit(AUTH_RATE_LIMIT)
+async def get_order(
+    request: Request,
+    response: Response,
+    cust_id: Optional[str] = Query(None, alias="custId"),
+    from_date: Optional[date] = Query(None, alias="from"),
+    to: Optional[date] = None,
+    page: Optional[int] = 0,
+    size: Optional[int] = 20,
+):
+    items, total_count = search_orders(cust_id, from_date, to, page, size)
+    return {
+        "list": [i.model_dump() for i in items],
+        "totalCount": total_count,
+        "page": page,
+        "size": size,
+    }

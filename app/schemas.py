@@ -94,3 +94,11 @@ class OrderCreateResponse(BaseModel):
     items: List[OrderItemCreateResponse]
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class OrderSummary(BaseModel):
+    order_id: str
+    order_date: date
+    total_amount: int = Field(ge=0)
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)

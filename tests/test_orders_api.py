@@ -77,3 +77,39 @@ def test_create_order_duplicate_item(client):
     r = post_json(client, "/orders", payload, api_key=ck)
     assert r.status_code == 409
     assert r.json()["detail"]["code"] == "ITEM_DUP"
+
+
+# def test_get_order(client):
+#     ck = "test-secret"
+#     r = client.get(
+#         "/orders",
+#         params={
+#             "custId": "C_1234",
+#             "from": date.today(),
+#             "to": date.today(),
+#             "page": 0,
+#             "size": 20
+#         },
+#         headers={"X-API-KEY": ck}
+#     )
+#     print(r.json())
+
+
+def test_create_order_sets_fixed_date(client, frozen_today):
+    ck = "test-secret"
+    cust = post_json(
+        client, "/customers", {"name": "A", "email": "a@ex.com"}, api_key=ck
+    ).json()
+    prod = post_json(
+        client, "/products", {"name": "Pen", "unitPrice": 100}, api_key=ck
+    ).json()
+
+    r = post_json(
+        client,
+        "/orders",
+        {"custId": cust["custId"], "items": [{"prodId": prod["prodId"], "qty": 2}]},
+        api_key=ck,
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["orderDate"] == "2025-10-06"
