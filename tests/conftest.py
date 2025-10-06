@@ -1,15 +1,36 @@
 # tests/conftest.py
 import copy
 import logging.config
+from datetime import date as _date
 
 import pytest
 from fastapi.testclient import TestClient
+
+FIXED_TODAY = (2025, 10, 6)
 
 
 def _get_logging_config():
     from app.main import LOGGING_CONFIG
 
     return LOGGING_CONFIG
+
+
+@pytest.fixture
+def frozen_today(monkeypatch):
+    """
+    app.services_orders モジュール内の date.today() を固定する。
+    """
+
+    class _FixedDate(_date):
+        @classmethod
+        def today(cls):
+            y, m, d = FIXED_TODAY
+            return cls(y, m, d)
+
+    import app.services_orders as mod
+
+    monkeypatch.setattr(mod, "date", _FixedDate, raising=True)
+    yield
 
 
 @pytest.fixture(autouse=True)
