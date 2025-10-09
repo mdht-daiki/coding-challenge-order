@@ -32,14 +32,15 @@ def new_order_id() -> str:
         raise RuntimeError("Failed to generate unique order ID after maximum attempts")
 
 
-def create_order(
-    payload: OrderCreate, *, today_provider=date.today
-) -> OrderCreateResponse:
+def create_order(payload: OrderCreate, *, today_provider=None) -> OrderCreateResponse:
     """
     顧客・商品の存在チェックが必要
     アイテム(prodId)の重複 NG (同じ商品が複数行に出ない)
     合計金額はサーバサイドで計算
     """
+    if today_provider is None:
+        today_provider = date.today
+
     global _line_no
 
     with _lock_c:
