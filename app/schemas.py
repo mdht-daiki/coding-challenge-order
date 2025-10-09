@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictInt, field_validator
 from pydantic.alias_generators import to_camel
@@ -102,3 +102,11 @@ class OrderSummary(BaseModel):
     total_amount: int = Field(ge=0)
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class AuthContext(BaseModel):
+    """認証済みユーザのコンテキスト情報"""
+
+    api_key: str
+    customer_id: Optional[str]  # Noneの場合は管理者
+    is_admin: bool

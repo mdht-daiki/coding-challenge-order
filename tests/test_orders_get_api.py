@@ -160,3 +160,61 @@ def test_get_orders_sorted_desc_by_default(client):
     assert r.status_code == 200
     dates: List[str] = [it["orderDate"] for it in r.json()["list"]]
     assert dates == sorted(dates, reverse=True)
+
+
+def test_get_orders_returns_only_own_orders(client):
+    """一般ユーザーは自分の注文のみ取得できることを確認"""
+    # APIキー1で顧客1を作成(この時点でAPIキー1とcustId1が紐づく)
+    customer1 = post_json(
+        client,
+        "/customers",
+        {"name": "Customer 1", "email": "customer1@example.com"},
+        api_key="test-api-key-1",
+    ).json()
+
+    # APIキー2で顧客2を作成(この時点でAPIキー2とcustId2が紐づく)
+    customer2 = post_json(
+        client,
+        "/customers",
+        {"name": "Customer 2", "email": "customer2@example.com"},
+        api_key="test-api-key-2",
+    ).json()
+
+    # 管理者権限で商品を作成
+    product = post_json(
+        client,
+        "/products",
+        {"name": "Product A", "price": 100},
+        api_key="admin-api-key",
+    ).json()
+
+    # 顧客1の注文を作成(管理者権限で作成)
+    post_json(
+        client,
+        "/orders",
+        {
+            "custId": customer1["custId"],
+            "items": [{"prodId": product["prodId"], "quantity": 1}],
+        },
+        api_key="admin-api-key",
+    )
+
+    # 顧客2の注文を作成(管理者権限で作成)
+    post_json(
+        client,
+        "/orders",
+        {
+            "custId": customer2["custId"],
+            "items": [{"prodId": product["prodId"], "quantity": 2}],
+        },
+        api_key="admin-api-key",
+    )
+
+    # 顧客1のAPIキーで注文を取得(自動的にcustomer1の注文のみ取得)
+    response = client.get("/orders", headers={"X-API-KEY": "test-api-key-1"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["totalCount"] == 1
+    assert len(data["list"]) == 1
+    assert data["list"][0]["orderId"]

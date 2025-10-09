@@ -4,9 +4,10 @@ import hmac
 import logging
 import os
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Dict, Set, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 from fastapi import Header, HTTPException, Request, status
 
@@ -30,6 +31,77 @@ _blocked_ips: Dict[str, datetime] = {}
 MAX_FAILED_ATTEMPTS = 5  # 5回失敗でブロック
 BLOCK_DURATION_MINUTES = 15  # 15分間ブロック
 FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
+
+# APIキーと顧客IDのマッピング(動的に更新される)
+_lock_auth = threading.RLock()
+_api_key_to_customer: Dict[str, Optional[str]] = {}
+_admin_api_keys = {"admin_api_key", "test-secret"}  # 管理者キーのセット
+
+
+def initialize_api_keys():
+    """
+    初期状態のAPIキーを設定
+    - 一般ユーザーのキーは最初は未バインド(キーは存在するが値はNone)
+    - 管理者キーも設定
+    """
+    with _lock_auth:
+        _api_key_to_customer.clear()
+        # 管理者キー(常にNone)
+        _api_key_to_customer["admin_api_key"] = None
+        _api_key_to_customer["test-secret"] = None
+        # 一般ユーザーキー(未バインド状態)
+        _api_key_to_customer["test-api-key-1"] = None
+        _api_key_to_customer["test-api-key-2"] = None
+        _api_key_to_customer["test-api-key"] = None
+
+
+def is_valid_api_key(api_key: str) -> bool:
+    """APIキーが有効かどうかを確認"""
+    with _lock_auth:
+        return api_key in _api_key_to_customer
+
+
+def is_admin_api_key(api_key: str) -> bool:
+    """管理者APIキーかどうかを判定"""
+    return api_key in _admin_api_keys
+
+
+def bind_api_key_to_customer(api_key: str, customer_id: str) -> None:
+    """
+    APIキーを顧客IDにバインド
+    管理者キーはバインドしない
+    """
+    if is_admin_api_key(api_key):
+        return  # 管理者キーはバインドしない
+
+    with _lock_auth:
+        if api_key in _api_key_to_customer:
+            _api_key_to_customer[api_key] = customer_id
+
+
+def get_customer_id_from_api_key(api_key: str) -> Optional[str]:
+    """
+    APIキーから顧客IDを取得
+    - 管理者の場合: None
+    - 一般ユーザー(バインド済み): 顧客ID
+    - 一般ユーザー(未バインド): None
+    """
+    with _lock_auth:
+        return _api_key_to_customer.get(api_key)
+
+
+def is_api_key_bound(api_key: str) -> bool:
+    """
+    APIキーがすでに顧客IDにバインドされているかを確認
+    管理者キーは常にFalseを返す
+    """
+    if is_admin_api_key(api_key):
+        return False
+    with _lock_auth:
+        return (
+            api_key in _api_key_to_customer
+            and _api_key_to_customer[api_key] is not None
+        )
 
 
 def init_api_key():

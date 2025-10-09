@@ -4,16 +4,25 @@ from contextlib import asynccontextmanager
 from datetime import date
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Query, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.requests import Request as StarletteRequest
 
-from .core.auth import init_api_key, require_api_key
+from .core.auth import (
+    bind_api_key_to_customer,
+    get_customer_id_from_api_key,
+    init_api_key,
+    is_admin_api_key,
+    is_api_key_bound,
+    is_valid_api_key,
+    require_api_key,
+)
 from .core.exception_handlers import include_handlers
 from .schemas import (
+    AuthContext,
     CustomerCreate,
     CustomerWithId,
     OrderCreate,
@@ -79,6 +88,31 @@ def get_api_key_for_limit(request: Request) -> str:
             else auth_header
         )
     return api_key if api_key else get_remote_address(request)
+
+
+# async def require_api_key(request: Request):
+#     """APIキーの検証"""
+#     api_key = request.headers.get("X-API-KEY")
+#     if not api_key or not is_valid_api_key(api_key):
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Invalid or missing api key",
+#         )
+
+
+async def get_auth_context(request: Request) -> AuthContext:
+    """認証コンテキストを取得"""
+    api_key = request.headers.get("X-API-KEY")
+    if not api_key or not is_valid_api_key(api_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+        )
+
+    customer_id = get_customer_id_from_api_key(api_key)
+    is_admin = is_admin_api_key(api_key)
+
+    return AuthContext(api_key=api_key, customer_id=customer_id, is_admin=is_admin)
 
 
 # Limiterの初期化（default_limitsでグローバル制限を設定）
@@ -151,8 +185,25 @@ async def post_customer(
     body: CustomerCreate,
     response: Response,
 ) -> CustomerWithId:
+    """
+    顧客を作成
+    - 管理者: 制限なく作成可能
+    - 一般ユーザー: 1つのAPIキーにつき1顧客まで作成可能
+    """
+    api_key = request.headers.get("X-API-KEY")
+
+    # 管理者でない場合、すでにバインド済みならエラー
+    if not is_admin_api_key(api_key) and is_api_key_bound(api_key):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This API key is already associated with a customer",
+        )
+
     customer = create_customer(body.name, body.email)
     response.headers["Location"] = f"/customers/{customer.cust_id}"
+
+    # APIキーを顧客IDにバインド(管理者キーの場合は何もしない)
+    bind_api_key_to_customer(api_key, customer.cust_id)
     return customer
 
 
@@ -197,12 +248,25 @@ async def post_order(
 async def get_order(
     request: Request,
     response: Response,
-    cust_id: Optional[str] = Query(None, alias="custId"),
+    auth_context: AuthContext = Depends(get_auth_context),
     from_date: Optional[date] = Query(None, alias="from"),
     to: Optional[date] = None,
     page: Optional[int] = 0,
     size: Optional[int] = 20,
 ):
+    """
+    注文一覧を取得
+    - 一般ユーザー：自分の注文のみ取得
+    - 管理者：すべての注文を取得
+    """
+    cust_id = None if auth_context.is_admin else auth_context.customer_id
+
+    if not auth_context.is_admin and auth_context.customer_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No customer associated with this API key",
+        )
+
     items, total_count = search_orders(cust_id, from_date, to, page, size)
     return {
         "list": [i.model_dump(by_alias=True) for i in items],
