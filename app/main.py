@@ -15,6 +15,7 @@ from .core.auth import (
     bind_api_key_to_customer,
     get_customer_id_from_api_key,
     init_api_key,
+    initialize_api_keys,
     is_admin_api_key,
     is_api_key_bound,
     is_valid_api_key,
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
     # スタートアップ処理
     logging.config.dictConfig(LOGGING_CONFIG)
     init_api_key()
+    initialize_api_keys()
     yield
     # シャットダウン処理（必要に応じて追加）
 

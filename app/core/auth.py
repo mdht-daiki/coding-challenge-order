@@ -35,7 +35,7 @@ FAILED_ATTEMPTS_WINDOW_MINUTES = 5  # 5分以内の失敗をカウントする
 # APIキーと顧客IDのマッピング(動的に更新される)
 _lock_auth = threading.RLock()
 _api_key_to_customer: Dict[str, Optional[str]] = {}
-_admin_api_keys = {"admin_api_key", "test-secret"}  # 管理者キーのセット
+_admin_api_keys = {"admin-api-key", "test-secret"}  # 管理者キーのセット
 
 
 def initialize_api_keys():
@@ -47,12 +47,11 @@ def initialize_api_keys():
     with _lock_auth:
         _api_key_to_customer.clear()
         # 管理者キー(常にNone)
-        _api_key_to_customer["admin_api_key"] = None
-        _api_key_to_customer["test-secret"] = None
+        for admin_key in _admin_api_keys:
+            _api_key_to_customer.setdefault(admin_key, None)
         # 一般ユーザーキー(未バインド状態)
-        _api_key_to_customer["test-api-key-1"] = None
-        _api_key_to_customer["test-api-key-2"] = None
-        _api_key_to_customer["test-api-key"] = None
+        for api_key in _VALID_API_KEYS:
+            _api_key_to_customer[api_key] = None
 
 
 def is_valid_api_key(api_key: str) -> bool:

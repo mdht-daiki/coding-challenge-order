@@ -37,7 +37,10 @@ def frozen_today(monkeypatch):
 def set_api_key_env(monkeypatch):
     # テスト専用固定キー
     monkeypatch.setenv("API_KEY", "test-secret")
-    monkeypatch.setenv("API_KEYS", "test-secret,new-test-key")
+    monkeypatch.setenv(
+        "API_KEYS",
+        "test-secret,new-test-key,test-api-key-1,test-api-key-2,admin-api-key",
+    )
     monkeypatch.setenv("API_KEY_HASH_SECRET", "hash-secret")
     monkeypatch.setenv("TESTING", "true")
     yield
