@@ -107,9 +107,10 @@ class _OrdersMem(OrdersRepo):
         return page_items, total
 
     def pop_line_no(self):
-        value = self._line_no
-        self._line_no += 1
-        return value
+        with self._lock:
+            value = self._line_no
+            self._line_no += 1
+            return value
 
 
 class MemoryUoW(UoW):
