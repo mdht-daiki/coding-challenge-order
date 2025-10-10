@@ -26,7 +26,6 @@ def test_create_order_ok(client):
         ],
     }
     r = post_json(client, "/orders", od, api_key=ck)
-    print(r.json())
     assert r.status_code == 201
     body = r.json()
     assert re.fullmatch(r"O_[0-9a-f]{8}", body["orderId"])

@@ -40,9 +40,7 @@ def create_order(
     if today_provider is None:
         today_provider = date.today
 
-    global _line_no
-
-    if uow.customers.exists_id(payload.cust_id):
+    if not uow.customers.exists_id(payload.cust_id):
         raise NotFound("CUST_NOT_FOUND", f"custId not found: {payload.cust_id}")
 
     seen = set()
@@ -61,14 +59,13 @@ def create_order(
     for it in payload.items:
         prod = uow.products.by_id(it.prod_id)
         item = OrderItemCreateResponse(
-            line_no=_line_no,
+            line_no=uow.orders.pop_line_no(),
             prod_id=it.prod_id,
             qty=it.qty,
             unit_price=prod.unit_price,
             line_amount=prod.unit_price * it.qty,
         )
         items.append(item)
-        _line_no += 1
 
     order = OrderCreateResponse(
         order_id=order_id,
@@ -77,6 +74,7 @@ def create_order(
         items=items,
     )
     uow.orders.save(order, payload.cust_id)
+    uow.commit()
     return order
 
 

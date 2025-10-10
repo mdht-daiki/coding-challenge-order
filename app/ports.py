@@ -30,6 +30,7 @@ class OrdersRepo(Protocol):
         page: int,
         size: int,
     ) -> tuple[list[OrderCreateResponse], int]: ...
+    def pop_line_no(self) -> int: ...
 
 
 class UoW(Protocol):

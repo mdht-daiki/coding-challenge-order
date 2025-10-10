@@ -29,4 +29,5 @@ def create_product(uow: UoW, name: str, unit_price) -> ProductWithId:
     product = ProductWithId(prod_id=prod_id, name=name, unit_price=unit_price)
 
     uow.products.save(product)
+    uow.commit()
     return product
