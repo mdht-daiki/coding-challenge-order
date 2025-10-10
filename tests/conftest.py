@@ -85,19 +85,11 @@ def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
     from app.core.auth import _blocked_ips, _failed_attempts, initialize_api_keys
     from app.deps import reset_uow_for_tests
-    from app.services_orders import _lock_o, _orders_by_custid, _orders_by_id
-    from app.services_products import _lock_p, _prodid_by_name, _products_by_id
 
     _blocked_ips.clear()
     _failed_attempts.clear()
     initialize_api_keys()
     reset_uow_for_tests()
-    with _lock_p:
-        _products_by_id.clear()
-        _prodid_by_name.clear()
-    with _lock_o:
-        _orders_by_id.clear()
-        _orders_by_custid.clear()
     try:
         yield
     finally:
@@ -105,12 +97,6 @@ def reset_storage():
         _failed_attempts.clear()
         initialize_api_keys()
         reset_uow_for_tests()
-        with _lock_p:
-            _products_by_id.clear()
-            _prodid_by_name.clear()
-        with _lock_o:
-            _orders_by_id.clear()
-            _orders_by_custid.clear()
 
 
 @pytest.fixture

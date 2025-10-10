@@ -1,8 +1,6 @@
-import threading
 import uuid
-from collections import defaultdict
 from datetime import date
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .core.errors import Conflict, NotFound
 from .ports import UoW
@@ -12,12 +10,6 @@ from .schemas import (
     OrderItemCreateResponse,
     OrderSummary,
 )
-
-# In-memory storage
-_lock_o = threading.RLock()
-_orders_by_id: Dict[str, OrderCreateResponse] = {}
-_orders_by_custid: Dict[str, List[OrderCreateResponse]] = defaultdict(list)
-_line_no = 1
 
 
 def new_order_id(uow: UoW) -> str:

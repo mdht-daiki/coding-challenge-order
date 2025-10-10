@@ -60,7 +60,7 @@ class _OrdersMem(OrdersRepo):
         self._by_id: Dict[str, OrderCreateResponse] = {}
         self._by_custid: Dict[str, List[OrderCreateResponse]] = defaultdict(list)
         self._lock = threading.RLock()
-        self._line_no = 0
+        self._line_no = 1
 
     def by_id(self, order_id: str) -> OrderCreateResponse | None:
         with self._lock:

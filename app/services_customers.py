@@ -1,15 +1,8 @@
-import threading
 import uuid
-from typing import Dict
 
 from .core.errors import Conflict
 from .ports import UoW
 from .schemas import CustomerWithId
-
-# In-memory storage
-_lock = threading.RLock()
-_customers_by_id: Dict[str, CustomerWithId] = {}
-_custid_by_email: Dict[str, str] = {}
 
 
 def new_cust_id(uow: UoW) -> str:

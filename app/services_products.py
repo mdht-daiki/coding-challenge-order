@@ -1,15 +1,8 @@
-import threading
 import uuid
-from typing import Dict
 
 from .core.errors import Conflict
 from .ports import UoW
 from .schemas import ProductWithId
-
-# In-memory storage
-_lock_p = threading.RLock()
-_products_by_id: Dict[str, ProductWithId] = {}
-_prodid_by_name: Dict[str, str] = {}
 
 
 def new_prod_id(uow: UoW) -> str:
