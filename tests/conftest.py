@@ -47,6 +47,26 @@ def set_api_key_env(monkeypatch):
 
 
 @pytest.fixture
+def use_memory_uow():
+    from app.deps import force_memory_mode
+
+    force_memory_mode()
+    yield
+    force_memory_mode()
+
+
+@pytest.fixture
+def use_db_uow(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("USE_DB", "1")
+    from app.deps import force_db_mode
+
+    force_db_mode()
+    yield
+
+
+@pytest.fixture
 def client():
     from app.main import app  # ← ここでだけ import
 
@@ -84,19 +104,19 @@ def client_with_rate_limit(monkeypatch):
 def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
     from app.core.auth import _blocked_ips, _failed_attempts, initialize_api_keys
-    from app.deps import reset_uow_for_tests
+    from app.deps import reset_memory_singleton
 
     _blocked_ips.clear()
     _failed_attempts.clear()
     initialize_api_keys()
-    reset_uow_for_tests()
+    reset_memory_singleton()
     try:
         yield
     finally:
         _blocked_ips.clear()
         _failed_attempts.clear()
         initialize_api_keys()
-        reset_uow_for_tests()
+        reset_memory_singleton()
 
 
 @pytest.fixture

@@ -22,6 +22,7 @@ from .core.auth import (
     require_api_key,
 )
 from .core.exception_handlers import include_handlers
+from .db.database import Base, get_engine
 from .deps import get_uow
 from .ports import UoW
 from .schemas import (
@@ -75,6 +76,7 @@ async def lifespan(app: FastAPI):
     logging.config.dictConfig(LOGGING_CONFIG)
     init_api_key()
     initialize_api_keys()
+    Base.metadata.create_all(bind=get_engine())
     yield
     # シャットダウン処理（必要に応じて追加）
 
