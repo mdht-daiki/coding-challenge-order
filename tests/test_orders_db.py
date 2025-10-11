@@ -10,9 +10,11 @@ def test_orders_flow_on_db(client):
     c = post_json(
         client, "/customers", {"name": "A", "email": "a@ex.com"}, api_key=ck
     ).json()
+    print(c)
     p = post_json(
         client, "/products", {"name": "Pen", "unitPrice": 100}, api_key=ck
     ).json()
+    print(p)
     # 注文
     r = post_json(
         client,
@@ -20,7 +22,8 @@ def test_orders_flow_on_db(client):
         {"custId": c["custId"], "items": [{"prodId": p["prodId"], "qty": 2}]},
         api_key=ck,
     )
-    assert r.status_code == 200
+    print(r.json())
+    assert r.status_code == 201
     # 検索（自分のみ）
     r2 = client.get("/orders", headers={"X-API-KEY": ck})
     assert r2.status_code == 200

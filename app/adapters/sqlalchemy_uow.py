@@ -35,7 +35,7 @@ class SqlAlchemyUoW(UoW, AbstractContextManager):
     # Session ライフサイクル
     @property
     def session(self) -> Session:
-        if self._sesion is None:
+        if self._session is None:
             self._session = self._Session()
         return self._session
 
@@ -230,7 +230,6 @@ class _OrdersRepo(OrdersRepo):
         results: list[OrderCreateResponse] = [
             OrderCreateResponse(
                 order_id=r.order_id,
-                cust_id=r.cust_id,
                 order_date=r.order_date,
                 total_amount=r.total_amount,
                 items=[],

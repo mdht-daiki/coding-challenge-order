@@ -12,7 +12,7 @@ Base = declarative_base()
 @lru_cache(maxsize=1)
 def get_engine():
     url = os.getenv("DATABASE_URL", "sqlite:///./app.db")
-    connect_args = {"check_same_thread"} if url.startswith("sqlite") else {}
+    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     return create_engine(url, echo=False, future=True, connect_args=connect_args)
 
 

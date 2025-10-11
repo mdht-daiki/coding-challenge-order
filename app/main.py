@@ -76,6 +76,7 @@ async def lifespan(app: FastAPI):
     logging.config.dictConfig(LOGGING_CONFIG)
     init_api_key()
     initialize_api_keys()
+    Base.metadata.create_all(bind=get_engine())
     yield
     # シャットダウン処理（必要に応じて追加）
 
@@ -119,11 +120,6 @@ limiter = Limiter(
 )
 
 app = FastAPI(title="Order Management API", version="1.0.0", lifespan=lifespan)
-
-
-@app.on_event("startup")
-async def on_startup():
-    Base.metadata.create_all(bind=get_engine())
 
 
 @app.exception_handler(RateLimitExceeded)
