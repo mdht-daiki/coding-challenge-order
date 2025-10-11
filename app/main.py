@@ -22,6 +22,7 @@ from .core.auth import (
     require_api_key,
 )
 from .core.exception_handlers import include_handlers
+from .db.database import Base, get_engine
 from .deps import get_uow
 from .ports import UoW
 from .schemas import (
@@ -118,6 +119,11 @@ limiter = Limiter(
 )
 
 app = FastAPI(title="Order Management API", version="1.0.0", lifespan=lifespan)
+
+
+@app.on_event("startup")
+async def on_startup():
+    Base.metadata.create_all(bind=get_engine())
 
 
 @app.exception_handler(RateLimitExceeded)
