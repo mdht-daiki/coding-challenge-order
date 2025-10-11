@@ -84,37 +84,19 @@ def client_with_rate_limit(monkeypatch):
 def reset_storage():
     """各テストの前後でインメモリストレージを確実にクリア"""
     from app.core.auth import _blocked_ips, _failed_attempts, initialize_api_keys
-    from app.services_customers import _custid_by_email, _customers_by_id, _lock
-    from app.services_orders import _lock_o, _orders_by_custid, _orders_by_id
-    from app.services_products import _lock_p, _prodid_by_name, _products_by_id
+    from app.deps import reset_uow_for_tests
 
     _blocked_ips.clear()
     _failed_attempts.clear()
     initialize_api_keys()
-    with _lock:
-        _customers_by_id.clear()
-        _custid_by_email.clear()
-    with _lock_p:
-        _products_by_id.clear()
-        _prodid_by_name.clear()
-    with _lock_o:
-        _orders_by_id.clear()
-        _orders_by_custid.clear()
+    reset_uow_for_tests()
     try:
         yield
     finally:
         _blocked_ips.clear()
         _failed_attempts.clear()
         initialize_api_keys()
-        with _lock:
-            _customers_by_id.clear()
-            _custid_by_email.clear()
-        with _lock_p:
-            _products_by_id.clear()
-            _prodid_by_name.clear()
-        with _lock_o:
-            _orders_by_id.clear()
-            _orders_by_custid.clear()
+        reset_uow_for_tests()
 
 
 @pytest.fixture

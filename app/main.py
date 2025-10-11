@@ -22,6 +22,8 @@ from .core.auth import (
     require_api_key,
 )
 from .core.exception_handlers import include_handlers
+from .deps import get_uow
+from .ports import UoW
 from .schemas import (
     AuthContext,
     CustomerCreate,
@@ -90,16 +92,6 @@ def get_api_key_for_limit(request: Request) -> str:
             else auth_header
         )
     return api_key if api_key else get_remote_address(request)
-
-
-# async def require_api_key(request: Request):
-#     """APIキーの検証"""
-#     api_key = request.headers.get("X-API-KEY")
-#     if not api_key or not is_valid_api_key(api_key):
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Invalid or missing api key",
-#         )
 
 
 async def get_auth_context(request: Request) -> AuthContext:
@@ -186,6 +178,7 @@ async def post_customer(
     request: Request,  # slowapi のレート制限に必要
     body: CustomerCreate,
     response: Response,
+    uow: UoW = Depends(get_uow),
 ) -> CustomerWithId:
     """
     顧客を作成
@@ -201,7 +194,7 @@ async def post_customer(
             detail="This API key is already associated with a customer",
         )
 
-    customer = create_customer(body.name, body.email)
+    customer = create_customer(uow, body.name, body.email)
     response.headers["Location"] = f"/customers/{customer.cust_id}"
 
     # APIキーを顧客IDにバインド(管理者キーの場合は何もしない)
@@ -220,8 +213,9 @@ async def post_product(
     request: Request,  # slowapi のレート制限に必要
     body: ProductCreate,
     response: Response,
+    uow: UoW = Depends(get_uow),
 ) -> ProductWithId:
-    product = create_product(body.name, body.unit_price)
+    product = create_product(uow, body.name, body.unit_price)
     response.headers["Location"] = f"/products/{product.prod_id}"
     return product
 
@@ -237,8 +231,9 @@ async def post_order(
     request: Request,  # slowapi のレート制限に必要
     body: OrderCreate,
     response: Response,
+    uow: UoW = Depends(get_uow),
 ) -> OrderCreateResponse:
-    order = create_order(body)
+    order = create_order(uow, body)
     response.headers["Location"] = f"/orders/{order.order_id}"
     return order
 
@@ -255,6 +250,7 @@ async def get_order(
     to: Optional[date] = None,
     page: Optional[int] = 0,
     size: Optional[int] = 20,
+    uow: UoW = Depends(get_uow),
 ):
     """
     注文一覧を取得
@@ -269,7 +265,7 @@ async def get_order(
             detail="No customer associated with this API key",
         )
 
-    items, total_count = search_orders(cust_id, from_date, to, page, size)
+    items, total_count = search_orders(uow, cust_id, from_date, to, page, size)
     return {
         "list": [i.model_dump(by_alias=True) for i in items],
         "totalCount": total_count,

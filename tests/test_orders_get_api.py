@@ -7,6 +7,8 @@ from tests.helpers import post_json
 
 
 def _mk_order_for_date(cust_id: str, prod_id: str, qty: int, ymd: str):
+    from app.deps import get_uow
+
     payload = OrderCreate(
         cust_id=cust_id,
         items=[OrderItemCreate(prod_id=prod_id, qty=qty)],
@@ -15,7 +17,8 @@ def _mk_order_for_date(cust_id: str, prod_id: str, qty: int, ymd: str):
     def fixed():
         return date.fromisoformat(ymd)
 
-    return create_order(payload, today_provider=fixed)
+    uow = get_uow()
+    return create_order(uow, payload, today_provider=fixed)
 
 
 def _prepare_basic_data(client):
